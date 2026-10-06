@@ -1,0 +1,48 @@
+name: Publicar Atualizacao Financeiro Master Pro
+
+on:
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versao a publicar. Exemplo: 2026.291"
+        required: true
+        type: string
+      notas:
+        description: "Notas da atualizacao"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+
+      - name: Localizar pacote da atualizacao
+        id: pacote
+        shell: bash
+        run: |
+          ARQUIVO=$(find atualizacoes -maxdepth 1 -type f -name "*.zip" | head -n 1)
+
+          if [ -z "$ARQUIVO" ]; then
+            echo "Nenhum pacote ZIP encontrado na pasta atualizacoes."
+            exit 1
+          fi
+
+          echo "arquivo=$ARQUIVO" >> "$GITHUB_OUTPUT"
+
+      - name: Criar tag e publicar Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ inputs.versao }}
+          NOTAS: ${{ inputs.notas }}
+          ARQUIVO: ${{ steps.pacote.outputs.arquivo }}
+        run: |
+          gh release create "$VERSAO" "$ARQUIVO" \
+            --title "Financeiro Master Pro $VERSAO" \
+            --notes "$NOTAS"
