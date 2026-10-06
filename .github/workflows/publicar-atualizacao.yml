@@ -4,11 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       versao:
-        description: "Versao a publicar. Exemplo: 2026.291"
+        description: "Versao. Exemplo: 2026.291"
         required: true
         type: string
       notas:
         description: "Notas da atualizacao"
+        required: true
+        type: string
+      arquivo:
+        description: "Nome do ZIP enviado ao repositorio"
         required: true
         type: string
 
@@ -23,26 +27,29 @@ jobs:
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
-      - name: Localizar pacote da atualizacao
-        id: pacote
+      - name: Verificar pacote
         shell: bash
         run: |
-          ARQUIVO=$(find atualizacoes -maxdepth 1 -type f -name "*.zip" | head -n 1)
-
-          if [ -z "$ARQUIVO" ]; then
-            echo "Nenhum pacote ZIP encontrado na pasta atualizacoes."
+          if [ ! -f "${{ inputs.arquivo }}" ]; then
+            echo "Arquivo nao encontrado: ${{ inputs.arquivo }}"
             exit 1
           fi
 
-          echo "arquivo=$ARQUIVO" >> "$GITHUB_OUTPUT"
-
-      - name: Criar tag e publicar Release
+      - name: Criar Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSAO: ${{ inputs.versao }}
           NOTAS: ${{ inputs.notas }}
-          ARQUIVO: ${{ steps.pacote.outputs.arquivo }}
+          ARQUIVO: ${{ inputs.arquivo }}
         run: |
           gh release create "$VERSAO" "$ARQUIVO" \
             --title "Financeiro Master Pro $VERSAO" \
             --notes "$NOTAS"
+
+      - name: Remover ZIP do repositorio
+        run: |
+          git config user.name "Financeiro Master Pro Automacao"
+          git config user.email "actions@users.noreply.github.com"
+          git rm "${{ inputs.arquivo }}"
+          git commit -m "Remover pacote publicado ${{ inputs.versao }}"
+          git push
