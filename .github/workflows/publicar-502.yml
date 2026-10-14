@@ -1,0 +1,46 @@
+name: Publicar atualizacao aprovada 2026.502
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publicar-502.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publicar-2026-502
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter somente pacote aprovado em Windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          gh api repos/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/actions/runs/38636047165 > run.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('run.json'))
+          assert r['status']=='completed' and r['conclusion']=='success' and r['head_sha']=='b1fb4b718377bd91f58cc907b7aa36244e5c541c', 'Pacote nao aprovado'
+          PY
+          gh run download 38636047165 --name pacote502 --dir pacote
+          sha256sum pacote/FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip | awk '{print $1}' > hash-aprovado.txt
+          unzip -t pacote/FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip
+      - name: Publicar Financeiro Master Pro 2026.502
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          gh release create 2026.502 pacote/FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip --title 'Financeiro Master Pro 2026.502' --notes 'Importacao de extratos: cadastro e selecao automatica da conta bancaria quando os dados do titular sao reconhecidos no cabecalho PDF/Excel ou BANKACCTFROM do OFX. Reaproveita contas identificadas existentes; mantem bancos, agencias, contas e empresas separados; nao utiliza dados de contrapartes nem inventa conta quando o cabecalho e insuficiente. Botao IDENTIFICAR / CADASTRAR CONTAS para revisoes existentes e + na propria linha para confirmar contas sem sair da classificacao. Movimentacoes somente sao gravadas na importacao final. Fonte privada 339d7f980bd1b8c67e3730d34dd3f61557d65693 compilada; dez testes funcionais executados em Windows, seletor e cadastro inline reais, pesquisa de 17014 movimentos, leitores, transferencias, estornos, instalacao, rollback e arquivos bloqueados aprovados. Binarios do ZIP conferidos por SHA256 com a compilacao.'
+      - name: Confirmar ZIP publico por download e SHA256
+        shell: bash
+        run: |
+          url='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.502/FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip'
+          curl --fail --location --retry 4 --retry-delay 3 "$url" --output baixado502.zip
+          echo "$(cat hash-aprovado.txt)  baixado502.zip" | sha256sum --check
+          unzip -t baixado502.zip
+          echo "DOWNLOAD PUBLICO E SHA256 VERIFICADOS: $url"
