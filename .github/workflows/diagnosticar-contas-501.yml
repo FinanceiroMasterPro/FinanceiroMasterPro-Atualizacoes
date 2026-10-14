@@ -1,0 +1,66 @@
+name: Diagnosticar seletor real de contas 2026.501
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnosticar-contas-501.yml']
+permissions:
+  contents: read
+jobs:
+  diagnosticar:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Testar seletor do aplicativo publicado em banco isolado
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.501/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip' -OutFile pacote.zip
+          Expand-Archive pacote.zip -DestinationPath app
+          @'
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include="FinanceiroMasterPro"><HintPath>app/FinanceiroMasterPro.dll</HintPath></Reference><Reference Include="FinanceiroMasterPro.Infrastructure"><HintPath>app/FinanceiroMasterPro.Infrastructure.dll</HintPath></Reference><Reference Include="FinanceiroMasterPro.Application"><HintPath>app/FinanceiroMasterPro.Application.dll</HintPath></Reference><Reference Include="Microsoft.Data.Sqlite"><HintPath>app/Microsoft.Data.Sqlite.dll</HintPath></Reference></ItemGroup></Project>
+          '@ | Set-Content Teste.csproj
+          @'
+          using System;
+          using System.Collections;
+          using System.IO;
+          using System.Linq;
+          using System.Reflection;
+          using System.Windows;
+          using System.Windows.Controls;
+          using System.Windows.Media;
+          using System.Windows.Threading;
+          using FinanceiroMasterPro.Desktop;
+          using FinanceiroMasterPro.Desktop.Views;
+          using FinanceiroMasterPro.Infrastructure.Data;
+          class TestApp: App {protected override void OnStartup(StartupEventArgs e){}}
+          class Program {
+           const BindingFlags F=BindingFlags.Instance|BindingFlags.NonPublic;
+           static void Pump(){var f=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(()=>f.Continue=false));Dispatcher.PushFrame(f);}
+           static object Call(object o,string n,params object[] a)=>o.GetType().GetMethod(n,F)!.Invoke(o,a)!;
+           static ComboBox? Combo(DependencyObject o){if(o is ComboBox c)return c;for(int i=0;i<VisualTreeHelper.GetChildrenCount(o);i++){var c=Combo(VisualTreeHelper.GetChild(o,i));if(c!=null)return c;}return null;}
+           [STAThread]static void Main(){
+           var app=new TestApp{ShutdownMode=ShutdownMode.OnExplicitShutdown};app.InitializeComponent();
+           var dir=Path.Combine(Path.GetTempPath(),"fmp-lista-"+Guid.NewGuid());Directory.CreateDirectory(dir);DatabaseInitializer.SelecionarBanco(Path.Combine(dir,"teste.db"));DatabaseInitializer.Initialize();
+           var id=new ContaBancariaRepository().Salvar(new ContaBancaria{Nome="CONTA BANCARIA TESTE",Banco="Mercado Pago",TipoConta="Conta Bancária",Ativo=true});
+           var path=Path.Combine(dir,"teste.ofx");File.WriteAllText(path,"<OFX><BANKTRANLIST><STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260901<TRNAMT>100.00<FITID>TESTE<NAME>ENTRADA</STMTTRN></BANKTRANLIST><LEDGERBAL><BALAMT>100.00</LEDGERBAL></OFX>");
+           var w=new ImportacaoExtratoWindow{Width=1000,Height=720};Call(w,"AdicionarArquivosAoLote",(object)new[]{path});w.Show();Pump();w.UpdateLayout();
+           var grid=(DataGrid)w.FindName("GridLote");grid.ScrollIntoView(grid.Items[0]);Pump();grid.UpdateLayout();
+           var col=grid.Columns.Single(c=>c.Header.ToString()=="CONTA DE DESTINO");var cell=col.GetCellContent(grid.Items[0]);var combo=Combo(cell)!;
+           Console.WriteLine("CONTAS_REPOSITORIO="+new ContaBancariaRepository().Listar().Count);
+           Console.WriteLine("CONTAS_PUBLICAS="+w.ContasLote.Count+" ITENS_COMBO="+combo.Items.Count+" FONTE="+(combo.ItemsSource?.GetType().ToString()??"NULL"));
+           combo.IsDropDownOpen=true;Pump();Console.WriteLine("DROPDOWN_ABERTO="+combo.IsDropDownOpen+" ITENS="+combo.Items.Count);
+           foreach(var item in combo.Items)Console.WriteLine("OPCAO="+item);
+           combo.SelectedValue=id;combo.IsDropDownOpen=false;Pump();
+           var es=(IEnumerable)w.GetType().GetField("_loteExtratos",F)!.GetValue(w)!;var e=es.Cast<object>().First();Console.WriteLine("CONTA_ESCOLHIDA="+e.GetType().GetProperty("ContaId")!.GetValue(e));
+           if(combo.Items.Count!=1)throw new Exception("LISTA DE CONTAS VAZIA");
+           w.Close();app.Shutdown();
+           }
+          }
+          '@ | Set-Content Program.cs
+          dotnet build Teste.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Harness nao compilou." }
+          Copy-Item app/* bin/Release/net10.0-windows/ -Recurse -Force
+          dotnet bin/Release/net10.0-windows/Teste.dll
+          if ($LASTEXITCODE -ne 0) { throw "Seletor falhou." }
