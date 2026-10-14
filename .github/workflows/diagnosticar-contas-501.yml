@@ -1,8 +1,6 @@
 name: Diagnosticar seletor real de contas 2026.501
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/diagnosticar-contas-501.yml']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
