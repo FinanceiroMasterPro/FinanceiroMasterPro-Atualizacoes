@@ -41,7 +41,7 @@ jobs:
            static object Call(object o,string n,params object[] a)=>o.GetType().GetMethod(n,F)!.Invoke(o,a)!;
            static ComboBox? Combo(DependencyObject o){if(o is ComboBox c)return c;for(int i=0;i<VisualTreeHelper.GetChildrenCount(o);i++){var encontrado=Combo(VisualTreeHelper.GetChild(o,i));if(encontrado!=null)return encontrado;}return null;}
            [STAThread]static void Main(){
-           var app=new TestApp{ShutdownMode=ShutdownMode.OnExplicitShutdown};app.InitializeComponent();
+           var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
            var dir=Path.Combine(Path.GetTempPath(),"fmp-lista-"+Guid.NewGuid());Directory.CreateDirectory(dir);DatabaseInitializer.SelecionarBanco(Path.Combine(dir,"teste.db"));DatabaseInitializer.Initialize();
            var id=new ContaBancariaRepository().Salvar(new ContaBancaria{Nome="CONTA BANCARIA TESTE",Banco="Mercado Pago",TipoConta="Conta Bancária",Ativo=true});
            var path=Path.Combine(dir,"teste.ofx");File.WriteAllText(path,"<OFX><BANKTRANLIST><STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260901<TRNAMT>100.00<FITID>TESTE<NAME>ENTRADA</STMTTRN></BANKTRANLIST><LEDGERBAL><BALAMT>100.00</LEDGERBAL></OFX>");
