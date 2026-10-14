@@ -1,0 +1,43 @@
+name: Publicar pacote aprovado 2026.501
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publicar-501.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publicar-2026-501
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter pacote exato aprovado nos testes Windows
+        env:
+          ARTIFACT_URL: 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-4378-820e-a6c5-d17dfa74dd24/raw?se=2026-10-14T19%3A56%3A10Z&sp=r&sv=2026-02-06&sr=b&scid=42cf45f5-ab56-45f0-b8cf-c8557ae0a4b2&skoid=ba7c401a-35d6-40a0-a0f3-2259cc50bbe2&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-14T11%3A13%3A50Z&ske=2026-10-15T11%3A13%3A50Z&sks=b&skv=2026-02-06&sig=CUfNbv7w3g22UOKW4m5YMxyTDSMj9ubk7sDFRAMK82M%3D'
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 "$ARTIFACT_URL" --output artefato-aprovado.zip
+          echo 'e93d75a57f51ac956b95f759b2f02e3a8f91eee7aab9d157b61db277a69cb34e  artefato-aprovado.zip' | sha256sum --check
+          unzip -q artefato-aprovado.zip -d pacote
+          echo 'dafcf853c0ccdd3b57943c5f0f9eadbcc253de19a672b9571beba99c2734ccb6  pacote/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip' | sha256sum --check
+          unzip -t pacote/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip
+          unzip -q pacote/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip -d verificacao
+          for f in FinanceiroMasterPro.exe FinanceiroMasterPro.dll Atualizar-FinanceiroMasterPro.ps1 INSTALAR-ATUALIZACAO.cmd; do test -f "verificacao/$f"; done
+          test ! -f verificacao/FinanceiroMasterPro.Updater.exe
+      - name: Publicar atualizacao aprovada
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          gh release create 2026.501 pacote/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip --title 'Financeiro Master Pro 2026.501' --notes 'Importacao de extratos: aviso automatico em destaque de possiveis transferencias e estornos; contas de destino ausentes informadas como comparacao incompleta. Mesma data e valor com sinais opostos: contas diferentes indicam possivel transferencia; mesma conta indica possivel estorno. Coluna POSSIVEL OPERACAO nos lancamentos individuais e revisao. Historico importado, multiplos candidatos e contas distintas do mesmo banco preservados. Classificacao somente apos conferir e salvar. Fonte 7160915b105a147ec01f41b1294687fe250963d1; compilacao Windows 38625224517 aprovada com testes de janela 1000x720, 313 grupos/626 movimentos, 3000 repeticoes, pesquisa, leitores, instalacao, rollback e arquivos bloqueados. Pacote preservado integralmente por SHA256.'
+      - name: Confirmar download publico e SHA256
+        shell: bash
+        run: |
+          url='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.501/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip'
+          curl --fail --location --retry 4 --retry-delay 3 "$url" --output baixado501.zip
+          echo 'dafcf853c0ccdd3b57943c5f0f9eadbcc253de19a672b9571beba99c2734ccb6  baixado501.zip' | sha256sum --check
+          unzip -t baixado501.zip
+          echo "DOWNLOAD PUBLICO E SHA256 VERIFICADOS: $url"
