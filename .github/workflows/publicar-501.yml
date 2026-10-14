@@ -1,9 +1,11 @@
 name: Publicar pacote aprovado 2026.501
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/publicar-501.yml']
   workflow_dispatch:
+    inputs:
+      artifact_url:
+        description: 'URL temporaria do artefato aprovado (SHA256 fixado abaixo)'
+        required: true
+        type: string
 permissions:
   contents: write
 concurrency:
@@ -15,7 +17,7 @@ jobs:
     steps:
       - name: Obter pacote exato aprovado nos testes Windows
         env:
-          ARTIFACT_URL: 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-4378-820e-a6c5-d17dfa74dd24/raw?se=2026-10-14T19%3A56%3A10Z&sp=r&sv=2026-02-06&sr=b&scid=42cf45f5-ab56-45f0-b8cf-c8557ae0a4b2&skoid=ba7c401a-35d6-40a0-a0f3-2259cc50bbe2&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-14T11%3A13%3A50Z&ske=2026-10-15T11%3A13%3A50Z&sks=b&skv=2026-02-06&sig=CUfNbv7w3g22UOKW4m5YMxyTDSMj9ubk7sDFRAMK82M%3D'
+          ARTIFACT_URL: ${{ inputs.artifact_url }}
         shell: bash
         run: |
           curl --fail --location --retry 3 "$ARTIFACT_URL" --output artefato-aprovado.zip
