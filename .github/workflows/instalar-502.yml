@@ -1,0 +1,75 @@
+name: Validar instalacao e pacote aprovado 2026.502
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/instalar-502.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validar:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exigir testes funcionais aprovados do mesmo transporte
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $run = gh api repos/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/actions/runs/38635574147 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.head_sha -ne '57e198990434dca98c9da9957458c9011f3a41da') { throw 'Execucao funcional diferente.' }
+          $jobs = gh api repos/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/actions/runs/38635574147/jobs | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Testes funcionais indisponiveis.' }
+          $teste = $jobs.jobs.steps | Where-Object { $_.name -eq 'Executar testes reais de contas importacao pesquisa e leitores' }
+          if ($teste.conclusion -ne 'success') { throw 'Os dez testes funcionais nao foram aprovados.' }
+          Write-Host 'Dez testes funcionais aprovados; transporte 09ad7a77da212741f844225a7d95ec63f6dfe713c423602cc6157dde1d0c1330 permanece identico.'
+      - name: Reconstruir pacote com binarios compilados da fonte privada
+        shell: pwsh
+        run: |
+          $transporte = '.github/validacao/502.zip'
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '09ad7a77da212741f844225a7d95ec63f6dfe713c423602cc6157dde1d0c1330') { throw 'Transporte divergente.' }
+          Expand-Archive $transporte -DestinationPath qa
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          if ($manifest.source_commit -ne '339d7f980bd1b8c67e3730d34dd3f61557d65693') { throw 'Fonte divergente.' }
+          Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.501/FinanceiroMasterPro_Atualizacao_2026.501_FINAL.zip' -OutFile base501.zip
+          if ((Get-FileHash base501.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
+          Expand-Archive base501.zip -DestinationPath app
+          Copy-Item qa/payload/* app/ -Recurse -Force
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "app/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Arquivo difere da compilacao: $arquivo" }
+          }
+          foreach ($arquivo in @('FinanceiroMasterPro.exe','FinanceiroMasterPro.dll','Atualizar-FinanceiroMasterPro.ps1','INSTALAR-ATUALIZACAO.cmd','tessdata/por.traineddata','Compartilhar/FinanceiroMasterPro.Compartilhar.exe','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
+            if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
+          }
+          if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
+          Write-Host 'Binarios conferidos com compilacao da fonte 339d7f980bd1b8c67e3730d34dd3f61557d65693.'
+      - name: Montar e conferir ZIP final
+        shell: pwsh
+        run: |
+          Compress-Archive -Path app/* -DestinationPath FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip -Force
+          Expand-Archive FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip -DestinationPath pacote-verificado
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "pacote-verificado/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Binario do ZIP difere da compilacao: $arquivo" }
+          }
+      - name: Preparar caminho do instalador
+        shell: pwsh
+        run: |
+          Copy-Item app publicado -Recurse -Force
+      - name: Testar instalacao automatica manual e rollback
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          & qa/installer-tests/Testar-Instalador.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip
+      - name: Testar aplicativo aberto e arquivos bloqueados
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          & qa/installer-tests/Testar-Bloqueios.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip
+      - name: Guardar somente pacote aprovado
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacote502
+          path: FinanceiroMasterPro_Atualizacao_2026.502_FINAL.zip
