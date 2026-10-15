@@ -22,8 +22,41 @@ jobs:
           if ((Get-FileHash base.zip -Algorithm SHA256).Hash -ne 'da01123fcf6f36fadb6e2a979a4b526feedddd2bce1ebbaf121411ab56dc455a') { throw 'Base divergente' }
           Expand-Archive base.zip -DestinationPath previa
           Expand-Archive .github/validacao/previa506.zip -DestinationPath previa -Force
-          if ((Get-FileHash .github/validacao/teste506.zip -Algorithm SHA256).Hash -ne '9ebb658fa386269e5a1277eff5de9f2f86ad4eb254878e6046706d7655dedc9b') { throw 'Teste divergente' }
+          if ((Get-FileHash .github/validacao/teste506.zip -Algorithm SHA256).Hash -ne 'b495d4612e9842f522de111c3801b1d01e435ea53931d82061ce923f5f2f9126') { throw 'Teste divergente' }
           Expand-Archive .github/validacao/teste506.zip -DestinationPath previa -Force
+      - name: Preparar estilos a partir dos recursos compilados
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory style-extractor -Force | Out-Null
+          @'
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><Reference Include="FinanceiroMasterPro"><HintPath>../previa/FinanceiroMasterPro.dll</HintPath></Reference></ItemGroup></Project>
+          '@ | Set-Content style-extractor/Extrair.csproj
+          @'
+          using System;
+          using System.IO;
+          using System.Linq;
+          using System.Windows.Markup;
+          using System.Xml.Linq;
+          class Program {
+           [STAThread]static void Main(string[] args){
+            var app=new FinanceiroMasterPro.Desktop.App();app.InitializeComponent();
+            var dic=XElement.Parse(XamlWriter.Save(app.Resources));
+            var ns=XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+            var declaracoes=dic.Attributes().Where(x=>x.IsNamespaceDeclaration).ToArray();
+            foreach(var estilo in dic.Elements())foreach(var d in declaracoes)if(estilo.Attribute(d.Name)==null)estilo.Add(new XAttribute(d));
+            var documento=new XElement(ns+"Application",new XElement(ns+"Application.Resources",dic.Elements()));
+            File.WriteAllText(args[0],documento.ToString());
+            Console.WriteLine("Estilos extraidos dos recursos compilados: "+dic.Elements().Count());
+            Environment.Exit(0);
+           }
+          }
+          '@ | Set-Content style-extractor/Program.cs
+          dotnet build style-extractor/Extrair.csproj -c Release -o style-extractor/bin
+          if ($LASTEXITCODE -ne 0) { throw 'Extrator de recursos nao compilou.' }
+          Copy-Item previa/* style-extractor/bin/ -Recurse -Force
+          dotnet style-extractor/bin/Extrair.dll AppEstilos.xaml
+          if ($LASTEXITCODE -ne 0) { throw 'Estilos compilados nao extraidos.' }
+          Copy-Item AppEstilos.xaml previa/AppEstilos.xaml
       - name: Testar sequencia de transferencias e capturar cinco telas WPF
         shell: pwsh
         run: |
