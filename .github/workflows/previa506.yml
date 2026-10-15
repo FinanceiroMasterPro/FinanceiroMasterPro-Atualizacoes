@@ -17,7 +17,7 @@ jobs:
       - name: Preparar previa compilada sem publicar
         shell: pwsh
         run: |
-          if ((Get-FileHash .github/validacao/previa506.zip -Algorithm SHA256).Hash -ne 'f7383903af68af46ebfbcdfe0736ee4d13cb19e4d5f58666a52d1610ced828d5') { throw 'Binarios divergentes' }
+          if ((Get-FileHash .github/validacao/previa506.zip -Algorithm SHA256).Hash -ne '57f4d7796dc3418f6465e757d3d7b4f8c79353326dcd2d0d365119525e68f2e3') { throw 'Binarios divergentes' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.505/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip' -OutFile base.zip
           if ((Get-FileHash base.zip -Algorithm SHA256).Hash -ne 'da01123fcf6f36fadb6e2a979a4b526feedddd2bce1ebbaf121411ab56dc455a') { throw 'Base divergente' }
           Expand-Archive base.zip -DestinationPath previa
