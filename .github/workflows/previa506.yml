@@ -24,6 +24,8 @@ jobs:
           Expand-Archive .github/validacao/previa506.zip -DestinationPath previa -Force
           if ((Get-FileHash .github/validacao/teste506.zip -Algorithm SHA256).Hash -ne 'b495d4612e9842f522de111c3801b1d01e435ea53931d82061ce923f5f2f9126') { throw 'Teste divergente' }
           Expand-Archive .github/validacao/teste506.zip -DestinationPath previa -Force
+          if ((Get-FileHash .github/validacao/desktop506.zip -Algorithm SHA256).Hash -ne '556b4fec80657647e582482289b8a623c45881fc5cb0937098a73f40cce20b9a') { throw 'Desktop divergente' }
+          Expand-Archive .github/validacao/desktop506.zip -DestinationPath previa -Force
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
