@@ -1,0 +1,157 @@
+name: Validar Windows Financeiro Master Pro 2026.505
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/validar-publicar-505.yml', '.github/validacao/505.zip']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: validar-505
+  cancel-in-progress: true
+jobs:
+  validar:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Reconstruir pacote com binarios compilados da fonte privada
+        shell: pwsh
+        run: |
+          $transporte = '.github/validacao/505.zip'
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '4eeaf353b88acbd6d2a64b72933207fa7089262e9409f646d82e753f5bf09924') { throw 'Transporte divergente.' }
+          Expand-Archive $transporte -DestinationPath qa
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          if ($manifest.source_commit -ne 'f8ea8273395d42d3466ddb7d54597d64686811f5') { throw 'Fonte divergente.' }
+          Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.504/FinanceiroMasterPro_Atualizacao_2026.504_FINAL.zip' -OutFile base504.zip
+          if ((Get-FileHash base504.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
+          Expand-Archive base504.zip -DestinationPath app
+          Copy-Item qa/payload/* app/ -Recurse -Force
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "app/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Arquivo difere da compilacao: $arquivo" }
+          }
+          foreach ($arquivo in @('FinanceiroMasterPro.exe','FinanceiroMasterPro.dll','Atualizar-FinanceiroMasterPro.ps1','INSTALAR-ATUALIZACAO.cmd','tessdata/por.traineddata','Compartilhar/FinanceiroMasterPro.Compartilhar.exe','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
+            if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
+          }
+          if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
+          Write-Host 'Binarios conferidos com compilacao da fonte f8ea8273395d42d3466ddb7d54597d64686811f5.'
+      - name: Preparar estilos a partir dos recursos compilados
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory style-extractor -Force | Out-Null
+          @'
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><Reference Include="FinanceiroMasterPro"><HintPath>../app/FinanceiroMasterPro.dll</HintPath></Reference></ItemGroup></Project>
+          '@ | Set-Content style-extractor/Extrair.csproj
+          @'
+          using System;
+          using System.IO;
+          using System.Linq;
+          using System.Windows.Markup;
+          using System.Xml.Linq;
+          class Program {
+           [STAThread]static void Main(string[] args){
+            var app=new FinanceiroMasterPro.Desktop.App();app.InitializeComponent();
+            var dic=XElement.Parse(XamlWriter.Save(app.Resources));
+            var ns=XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+            var declaracoes=dic.Attributes().Where(x=>x.IsNamespaceDeclaration).ToArray();
+            foreach(var estilo in dic.Elements())foreach(var d in declaracoes)if(estilo.Attribute(d.Name)==null)estilo.Add(new XAttribute(d));
+            var documento=new XElement(ns+"Application",new XElement(ns+"Application.Resources",dic.Elements()));
+            File.WriteAllText(args[0],documento.ToString());
+            Console.WriteLine("Estilos extraidos dos recursos compilados: "+dic.Elements().Count());
+            Environment.Exit(0);
+           }
+          }
+          '@ | Set-Content style-extractor/Program.cs
+          dotnet build style-extractor/Extrair.csproj -c Release -o style-extractor/bin
+          if ($LASTEXITCODE -ne 0) { throw 'Extrator de recursos nao compilou.' }
+          Copy-Item app/* style-extractor/bin/ -Recurse -Force
+          dotnet style-extractor/bin/Extrair.dll AppEstilos.xaml
+          if ($LASTEXITCODE -ne 0) { throw 'Estilos compilados nao extraidos.' }
+      - name: Executar testes reais de contas importacao pesquisa e leitores
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
+          foreach ($teste in $testes) {
+            $destino = "test-executaveis/$teste"
+            New-Item -ItemType Directory $destino -Force | Out-Null
+            Copy-Item app/* "$destino/" -Recurse -Force
+            Copy-Item "qa/tests/$teste/*" "$destino/" -Force
+            Copy-Item AppEstilos.xaml "$destino/AppEstilos.xaml"
+            Write-Host "TESTE: $teste"
+            dotnet "$destino/$teste.dll"
+            if ($LASTEXITCODE -ne 0) { throw "Falhou: $teste" }
+          }
+      - name: Guardar capturas reais
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arquivos505-capturas
+          path: |
+            validacao-contas502/*.png
+            validacao-reuso503/*.png
+            validacao-melhorias504/*.png
+            validacao-arquivos505/*.png
+            validacao-transferencias/*.png
+            validacao-pesquisa500/*.png
+      - name: Montar e conferir ZIP final
+        shell: pwsh
+        run: |
+          Compress-Archive -Path app/* -DestinationPath FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip -Force
+          Expand-Archive FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip -DestinationPath pacote-verificado
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "pacote-verificado/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Binario do ZIP difere da compilacao: $arquivo" }
+          }
+      - name: Testar instalacao automatica manual e rollback
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          Copy-Item app publicado -Recurse -Force
+          & qa/installer-tests/Testar-Instalador.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip
+      - name: Testar aplicativo aberto e arquivos bloqueados
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          & qa/installer-tests/Testar-Bloqueios.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip
+      - name: Guardar somente pacote aprovado
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacote505
+          path: FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip
+
+  publicar:
+    needs: validar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacote505
+          path: pacote
+      - name: Validar pacote aprovado
+        shell: bash
+        run: |
+          unzip -t pacote/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip
+          sha256sum pacote/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip | awk '{print $1}' > hash-aprovado.txt
+      - name: Publicar atualizacao aprovada
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          gh release create 2026.505 pacote/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip --title 'Financeiro Master Pro 2026.505' --notes 'Contas por ARQUIVO DO EXTRATO: cada arquivo tem seu nome e saldo no resumo de contas; BANCO / ORIGEM identifica somente a instituicao. Migra lotes existentes sem perder a classificacao e sem exigir os originais; bancos auxiliares sem saldo ou movimentos ficam fora do resumo financeiro. Saldo inicial aplicado somente junto da importacao final, na mesma transacao dos movimentos, com rollback e sem reaplicar na reimportacao. Transferencias pelo sinal recarregam cadastros criados com a revisao aberta e resolvem centro ausente no vinculo quando ha uma opcao inequivoca; quatro campos atualizados nos seletores reais. Historico financeiro existente preservado. Fonte f8ea8273395d42d3466ddb7d54597d64686811f5. Testes Windows, resumo WPF real, migracao, cadastro tardio, rollback financeiro, leitores e instaladores aprovados; ZIP baixado e SHA256 verificado.'
+      - name: Confirmar download publico e SHA256
+        shell: bash
+        run: |
+          url='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.505/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip'
+          curl --fail --location --retry 4 --retry-delay 3 "$url" --output baixado505.zip
+          echo "$(cat hash-aprovado.txt)  baixado505.zip" | sha256sum --check
+          unzip -t baixado505.zip
+          echo "DOWNLOAD PUBLICO E SHA256 VERIFICADOS: $url"
