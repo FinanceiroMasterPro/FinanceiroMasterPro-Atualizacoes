@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/511.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'fdddd51822bcc481f3bc6bf11272104b9349d0f38dae92941d07320fc4d221c2') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'c50d503817c9e17162d20b225862eebccc6fa735ebd76e184964de1fe9a40c96') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '871c175e5bd862e8af883dca29f049c23b2c38f5') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '4615f2f1827e2a230eb84fe7fb5f488f6bd34f0d') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.510/FinanceiroMasterPro_Atualizacao_2026.510_FINAL.zip' -OutFile base510.zip
           if ((Get-FileHash base510.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base510.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 871c175e5bd862e8af883dca29f049c23b2c38f5.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 4615f2f1827e2a230eb84fe7fb5f488f6bd34f0d.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -154,7 +154,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.511 pacote/FinanceiroMasterPro_Atualizacao_2026.511_FINAL.zip --title 'Financeiro Master Pro 2026.511' --notes 'Preenchimento automatico de classificacao a partir de qualquer dos quatro campos: Plano de Contas, Centro de Custos, Grupo de Contas e Fluxo de Caixa. Combinacao unica completa automaticamente; multiplas combinacoes preenchem os campos comuns e solicitam somente as diferencas, filtrando as proximas opcoes conforme a escolha. Cadastro permite combinacoes que diferem somente no Centro, preservando os codigos existentes. Mesma regra nas Telas 2 a 5 e no editor em lote; colunas compartilhadas preservadas. Fonte 871c175e5bd862e8af883dca29f049c23b2c38f5. 22 testes Windows, instalacao, rollback e download publico com SHA256 verificados.'
+          gh release create 2026.511 pacote/FinanceiroMasterPro_Atualizacao_2026.511_FINAL.zip --title 'Financeiro Master Pro 2026.511' --notes 'Preenchimento automatico de classificacao a partir de qualquer dos quatro campos: Plano de Contas, Centro de Custos, Grupo de Contas e Fluxo de Caixa. Combinacao unica completa automaticamente; multiplas combinacoes preenchem os campos comuns e solicitam somente as diferencas, filtrando as proximas opcoes conforme a escolha. Cadastro permite combinacoes que diferem somente no Centro, preservando os codigos existentes. Mesma regra nas Telas 2 a 5 e no editor em lote; colunas compartilhadas preservadas. Fonte 4615f2f1827e2a230eb84fe7fb5f488f6bd34f0d. 22 testes Windows, instalacao, rollback e download publico com SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
