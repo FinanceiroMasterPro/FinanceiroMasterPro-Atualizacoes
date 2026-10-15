@@ -25,6 +25,8 @@ jobs:
           $transporte = '.github/validacao/506.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'd4b03f7df0b0ba7b9880e30b6dc6f4df16c269808d9141478d1505d5a489fd0c') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
+          if ((Get-FileHash .github/validacao/testes506.zip -Algorithm SHA256).Hash -ne 'caf1b5c23cc838edc70fa27fa4f178a0ecbdffe7fa0e4885a33c8d0616df1b52') { throw 'Teste da Tela 4 divergente.' }
+          Expand-Archive .github/validacao/testes506.zip -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
           if ($manifest.source_commit -ne '9ceb0d8249456d1e466758d9598032adb1663b6b') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.505/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip' -OutFile base505.zip
@@ -76,6 +78,7 @@ jobs:
         shell: pwsh
         run: |
           $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
+          $falhas = @()
           foreach ($teste in $testes) {
             $destino = "test-executaveis/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
@@ -84,7 +87,9 @@ jobs:
             Copy-Item AppEstilos.xaml "$destino/AppEstilos.xaml"
             Write-Host "TESTE: $teste"
             dotnet "$destino/$teste.dll"
-            if ($LASTEXITCODE -ne 0) { throw "Falhou: $teste" }
+            if ($LASTEXITCODE -ne 0) { $falhas += $teste }
+          }
+          if ($falhas.Count -gt 0) { throw "Falharam: $($falhas -join ', ')"
           }
       - name: Guardar capturas reais
         if: always()
@@ -96,7 +101,7 @@ jobs:
             validacao-contas502/*.png
             validacao-reuso503/*.png
             validacao-melhorias504/*.png
-            validacao-arquivos506/*.png
+            validacao-arquivos505/*.png
             validacao-transferencias/*.png
             validacao-pesquisa500/*.png
       - name: Montar e conferir ZIP final
