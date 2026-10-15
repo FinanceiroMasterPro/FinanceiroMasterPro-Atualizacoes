@@ -82,6 +82,7 @@ jobs:
           Write-Host $saida
           if ($codigo -eq 0 -or $saida -notmatch 'Conflito nao preservou transacao') { throw 'Fixture antiga nao reproduziu falha preexistente na 511.' }
           Write-Host 'Confirmado: fixture antiga exige conflito de Centros distintos, permitidos desde a 511.'
+          exit 0
       - name: Executar testes reais de contas importacao pesquisa e leitores
         timeout-minutes: 10
         shell: pwsh
