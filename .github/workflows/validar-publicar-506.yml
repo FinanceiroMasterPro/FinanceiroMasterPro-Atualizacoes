@@ -25,7 +25,7 @@ jobs:
           $transporte = '.github/validacao/506.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'd4b03f7df0b0ba7b9880e30b6dc6f4df16c269808d9141478d1505d5a489fd0c') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
-          if ((Get-FileHash .github/validacao/testes506.zip -Algorithm SHA256).Hash -ne 'caf1b5c23cc838edc70fa27fa4f178a0ecbdffe7fa0e4885a33c8d0616df1b52') { throw 'Teste da Tela 4 divergente.' }
+          if ((Get-FileHash .github/validacao/testes506.zip -Algorithm SHA256).Hash -ne 'c1ad1d0109589dfc1dcdc8c13c3c80e117642e0f5dc422d468e131aeb09fd1ba') { throw 'Teste da Tela 4 divergente.' }
           Expand-Archive .github/validacao/testes506.zip -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
           if ($manifest.source_commit -ne '9ceb0d8249456d1e466758d9598032adb1663b6b') { throw 'Fonte divergente.' }
