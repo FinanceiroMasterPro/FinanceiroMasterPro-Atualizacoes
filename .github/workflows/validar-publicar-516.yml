@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/516.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'cacb80e093ea11e7dfd1cf443441ba8af43a64e1555287e09d4abe5cf64b195b') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'e52497c966ca4e05680e47e4a36089212ed9ae1df622a032bf1d238913b12644') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne 'f0a343d63516089c148bbf9fe48152fae1f54c69') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'c264885359b3969a8bf85562a87659ab6f06b02d') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.511/FinanceiroMasterPro_Atualizacao_2026.511_FINAL.zip' -OutFile base511.zip
           if ((Get-FileHash base511.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base511.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte f0a343d63516089c148bbf9fe48152fae1f54c69.'
+          Write-Host 'Binarios conferidos com compilacao da fonte c264885359b3969a8bf85562a87659ab6f06b02d.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
