@@ -22,6 +22,8 @@ jobs:
           if ((Get-FileHash base.zip -Algorithm SHA256).Hash -ne 'da01123fcf6f36fadb6e2a979a4b526feedddd2bce1ebbaf121411ab56dc455a') { throw 'Base divergente' }
           Expand-Archive base.zip -DestinationPath previa
           Expand-Archive .github/validacao/previa506.zip -DestinationPath previa -Force
+          if ((Get-FileHash .github/validacao/teste506.zip -Algorithm SHA256).Hash -ne '9ebb658fa386269e5a1277eff5de9f2f86ad4eb254878e6046706d7655dedc9b') { throw 'Teste divergente' }
+          Expand-Archive .github/validacao/teste506.zip -DestinationPath previa -Force
       - name: Testar sequencia de transferencias e capturar cinco telas WPF
         shell: pwsh
         run: |
