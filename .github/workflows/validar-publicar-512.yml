@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/512.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'c46102bd87d32fd57487cd7285d3738b4ea35a5eb0fcb2d286ea0ea0583fa40e') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'f3111c7ef252d0e8e152d0da0a722f6e23449c64cca7ae631da0c396afcdd8a1') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '048d2d7b739857f7f3c7cd31d41c2559de3afdbc') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'd57da2b3eb8ef373a156d2957c744379549eada7') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.511/FinanceiroMasterPro_Atualizacao_2026.511_FINAL.zip' -OutFile base511.zip
           if ((Get-FileHash base511.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base511.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 048d2d7b739857f7f3c7cd31d41c2559de3afdbc.'
+          Write-Host 'Binarios conferidos com compilacao da fonte d57da2b3eb8ef373a156d2957c744379549eada7.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -71,6 +71,17 @@ jobs:
           Copy-Item app/* style-extractor/bin/ -Recurse -Force
           dotnet style-extractor/bin/Extrair.dll AppEstilos.xaml
           if ($LASTEXITCODE -ne 0) { throw 'Estilos compilados nao extraidos.' }
+      - name: Reproduzir fixture antiga tambem na versao 511
+        shell: pwsh
+        run: |
+          Expand-Archive base511.zip -DestinationPath baseline511
+          Copy-Item qa/baseline/CadastroLancamentos/* baseline511/ -Force
+          Copy-Item AppEstilos.xaml baseline511/AppEstilos.xaml
+          $saida = & dotnet baseline511/CadastroLancamentos.dll 2>&1 | Out-String
+          $codigo = $LASTEXITCODE
+          Write-Host $saida
+          if ($codigo -eq 0 -or $saida -notmatch 'Conflito nao preservou transacao') { throw 'Fixture antiga nao reproduziu falha preexistente na 511.' }
+          Write-Host 'Confirmado: fixture antiga exige conflito de Centros distintos, permitidos desde a 511.'
       - name: Executar testes reais de contas importacao pesquisa e leitores
         timeout-minutes: 10
         shell: pwsh
@@ -154,7 +165,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.512 pacote/FinanceiroMasterPro_Atualizacao_2026.512_FINAL.zip --title 'Financeiro Master Pro 2026.512' --notes 'Classificacao automatica na tela de Lancamentos a partir de Plano de Contas, Centro de Custos, Grupo de Contas ou Fluxo de Caixa, por selecao, Enter e colagem de nome exato. Combinacao unica completa os campos; alternativas preenchem campos comuns e solicitam somente diferencas. Fonte compilada 048d2d7b739857f7f3c7cd31d41c2559de3afdbc. Testes Windows e instalacao com rollback aprovados antes da publicacao.'
+          gh release create 2026.512 pacote/FinanceiroMasterPro_Atualizacao_2026.512_FINAL.zip --title 'Financeiro Master Pro 2026.512' --notes 'Classificacao automatica na tela de Lancamentos a partir de Plano de Contas, Centro de Custos, Grupo de Contas ou Fluxo de Caixa, por selecao, Enter e colagem de nome exato. Combinacao unica completa os campos; alternativas preenchem campos comuns e solicitam somente diferencas. Fonte compilada d57da2b3eb8ef373a156d2957c744379549eada7. Testes Windows e instalacao com rollback aprovados antes da publicacao.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
