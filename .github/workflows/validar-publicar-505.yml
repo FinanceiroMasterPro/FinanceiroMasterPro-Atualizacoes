@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/505.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'd02a3f914f06eda2df7a080f9c8e7c7bc7927a7b9ef2ced4641e56c211f98200') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'e65c3f755723a5ec2ce7c48f8074d72886e9524f88705a0730807c1ab15f9d67') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne 'ed58dc9e8e6dcd82980fc5d1dc899ca9f01a761d') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '20e0dc40c73b68ba97f8b802e8e329d5179198a4') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.504/FinanceiroMasterPro_Atualizacao_2026.504_FINAL.zip' -OutFile base504.zip
           if ((Get-FileHash base504.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base504.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte ed58dc9e8e6dcd82980fc5d1dc899ca9f01a761d.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 20e0dc40c73b68ba97f8b802e8e329d5179198a4.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -146,7 +146,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.505 pacote/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip --title 'Financeiro Master Pro 2026.505' --notes 'Contas por ARQUIVO DO EXTRATO: cada arquivo tem seu nome e saldo no resumo de contas; BANCO / ORIGEM identifica somente a instituicao. Migra lotes existentes sem perder a classificacao e sem exigir os originais; bancos auxiliares sem saldo ou movimentos ficam fora do resumo financeiro. Saldo inicial aplicado somente junto da importacao final, na mesma transacao dos movimentos, com rollback e sem reaplicar na reimportacao. Transferencias pelo sinal recarregam cadastros criados com a revisao aberta e resolvem centro ausente no vinculo quando ha uma opcao inequivoca; quatro campos atualizados nos seletores reais. Historico financeiro existente preservado. Fonte ed58dc9e8e6dcd82980fc5d1dc899ca9f01a761d. Testes Windows, resumo WPF real, migracao, cadastro tardio, rollback financeiro, leitores e instaladores aprovados; ZIP baixado e SHA256 verificado.'
+          gh release create 2026.505 pacote/FinanceiroMasterPro_Atualizacao_2026.505_FINAL.zip --title 'Financeiro Master Pro 2026.505' --notes 'Contas por ARQUIVO DO EXTRATO: cada arquivo tem seu nome e saldo no resumo de contas; BANCO / ORIGEM identifica somente a instituicao. Migra lotes existentes sem perder a classificacao e sem exigir os originais; bancos auxiliares sem saldo ou movimentos ficam fora do resumo financeiro. Saldo inicial aplicado somente junto da importacao final, na mesma transacao dos movimentos, com rollback e sem reaplicar na reimportacao. Transferencias pelo sinal recarregam cadastros criados com a revisao aberta e resolvem centro ausente no vinculo quando ha uma opcao inequivoca; quatro campos atualizados nos seletores reais. Historico financeiro existente preservado. Fonte 20e0dc40c73b68ba97f8b802e8e329d5179198a4. Testes Windows, resumo WPF real, migracao, cadastro tardio, rollback financeiro, leitores e instaladores aprovados; ZIP baixado e SHA256 verificado.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
