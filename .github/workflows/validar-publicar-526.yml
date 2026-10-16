@@ -212,7 +212,12 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte 1842612aac818741e0653f94204bc923a65d851e.'
+          if gh release view 2026.526 >/dev/null 2>&1; then
+            gh release upload 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --clobber
+            gh release edit 2026.526 --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte 1842612aac818741e0653f94204bc923a65d851e.'
+          else
+            gh release create 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte 1842612aac818741e0653f94204bc923a65d851e.'
+          fi
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
