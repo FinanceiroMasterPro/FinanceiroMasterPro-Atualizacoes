@@ -2,7 +2,7 @@ name: Validar Windows Financeiro Master Pro 2026.523
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/validar-publicar-523.yml', '.github/validacao/523.zip']
+    paths: ['.github/workflows/validar-publicar-523.yml', '.github/validacao/523.zip', '.github/validacao/523-fix.zip']
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,8 +25,10 @@ jobs:
           $transporte = '.github/validacao/523.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '2695bcac975616e60f332f1d90c5e09fd2d95a9b8b9f162f9509dad44a4a6ada') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
+          if ((Get-FileHash '.github/validacao/523-fix.zip' -Algorithm SHA256).Hash -ne 'a3cb8b434ad88c5e0d0971567647dbc658697182fc69630724ad1ed380626d10') { throw 'Complemento divergente.' }
+          Expand-Archive '.github/validacao/523-fix.zip' -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '797556d6c4c0345a435e5fa73936d1d959cd3b3f') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'd3a2bff6ac68388729641430beac88890dbec046') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.522/FinanceiroMasterPro_Atualizacao_2026.522_FINAL.zip' -OutFile base523.zip
           if ((Get-FileHash base523.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base523.zip -DestinationPath app
@@ -38,7 +40,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 797556d6c4c0345a435e5fa73936d1d959cd3b3f.'
+          Write-Host 'Binarios conferidos com compilacao da fonte d3a2bff6ac68388729641430beac88890dbec046.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -187,7 +189,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.523 pacote/FinanceiroMasterPro_Atualizacao_2026.523_FINAL.zip --title 'Financeiro Master Pro 2026.523' --notes 'Cadastro profissional de produtos em sete abas: identificação, fornecedor e conversão de compra, estoque/logística, custos, formação de preço, referências fiscais/notas e histórico auditado. Simulador por margem sobre venda ou acréscimo de lucro sobre custo, despesas de compra, tributos/taxas de venda, rateio fixo e desconto planejado; sugestão protege a meta após desconto e mostra resultado estimado do preço praticado. Aplicar retorna à edição e somente Salvar grava. Pesquisa, filtros, ficha imprimível/PDF e Excel completo tipado. Preserva produtos antigos, vínculos e movimentos; concorrência e gravação atômica com histórico. 4526 verificações matemáticas em 1500 cenários; testes Windows reais e regressões, instalação/rollback/bloqueios. Fonte 797556d6c4c0345a435e5fa73936d1d959cd3b3f. Download público e SHA256 verificados.'
+          gh release create 2026.523 pacote/FinanceiroMasterPro_Atualizacao_2026.523_FINAL.zip --title 'Financeiro Master Pro 2026.523' --notes 'Cadastro profissional de produtos em sete abas: identificação, fornecedor e conversão de compra, estoque/logística, custos, formação de preço, referências fiscais/notas e histórico auditado. Simulador por margem sobre venda ou acréscimo de lucro sobre custo, despesas de compra, tributos/taxas de venda, rateio fixo e desconto planejado; sugestão protege a meta após desconto e mostra resultado estimado do preço praticado. Aplicar retorna à edição e somente Salvar grava. Pesquisa, filtros, ficha imprimível/PDF e Excel completo tipado. Preserva produtos antigos, vínculos e movimentos; concorrência e gravação atômica com histórico. 4526 verificações matemáticas em 1500 cenários; testes Windows reais e regressões, instalação/rollback/bloqueios. Fonte d3a2bff6ac68388729641430beac88890dbec046. Download público e SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
