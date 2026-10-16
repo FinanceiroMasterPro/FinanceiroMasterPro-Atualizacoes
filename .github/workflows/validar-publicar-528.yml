@@ -25,7 +25,7 @@ jobs:
           $transporte = '.github/validacao/525.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '7e69cc5e4f26f68485b6713bc0a60a96f0812a576b9143e1955536033ff7309d') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
-          if ((Get-FileHash '.github/validacao/528-fix.zip' -Algorithm SHA256).Hash -ne 'f40bfef52077e0aaf1461ce51c8840a72b8b92140ae2dad7ac59324afef2b2e6') { throw 'Complemento divergente.' }
+          if ((Get-FileHash '.github/validacao/528-fix.zip' -Algorithm SHA256).Hash -ne '0ac30695b19dffa3dfb0bd42ae15237ffaab142b8bb2694767562a4e019cc62e') { throw 'Complemento divergente.' }
           Expand-Archive '.github/validacao/528-fix.zip' -DestinationPath qa -Force
           $delta = Get-Content qa/delta528.json -Raw | ConvertFrom-Json -AsHashtable
           foreach ($item in $delta.GetEnumerator()) {
@@ -43,7 +43,7 @@ jobs:
             if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
           }
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '8f5443bcd59481c55c97684ef69227442a3b7326') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'db35d895e017beb00fa4719ff54db000644b4ad1') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.527/FinanceiroMasterPro_Atualizacao_2026.527_FINAL.zip' -OutFile base527.zip
           if ((Get-FileHash base527.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base527.zip -DestinationPath app
@@ -55,7 +55,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 8f5443bcd59481c55c97684ef69227442a3b7326.'
+          Write-Host 'Binarios conferidos com compilacao da fonte db35d895e017beb00fa4719ff54db000644b4ad1.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -216,9 +216,9 @@ jobs:
         run: |
           if gh release view 2026.528 >/dev/null 2>&1; then
             gh release upload 2026.528 pacote/FinanceiroMasterPro_Atualizacao_2026.528_FINAL.zip --clobber
-            gh release edit 2026.528 --title 'Financeiro Master Pro 2026.528' --notes 'Desempenho: consultas paginadas e totais SQL por empresa, pesquisa em todo o historico e painel agregado. Anexos de documentos por lancamento copiados no banco da empresa e incluidos no backup. Extrato ampliado das faturas com conferencia persistente independente da baixa, anexos e estados por empresa. Validacao Windows com bases sinteticas de 500 mil e 100 mil lancamentos, 30 suites, backup real, instalacao e rollback. Fonte 8f5443bcd59481c55c97684ef69227442a3b7326.'
+            gh release edit 2026.528 --title 'Financeiro Master Pro 2026.528' --notes 'Desempenho: consultas paginadas e totais SQL por empresa, pesquisa em todo o historico e painel agregado. Anexos de documentos por lancamento copiados no banco da empresa e incluidos no backup. Extrato ampliado das faturas com conferencia persistente independente da baixa, anexos e estados por empresa. Validacao Windows com bases sinteticas de 500 mil e 100 mil lancamentos, 30 suites, backup real, instalacao e rollback. Fonte db35d895e017beb00fa4719ff54db000644b4ad1.'
           else
-            gh release create 2026.528 pacote/FinanceiroMasterPro_Atualizacao_2026.528_FINAL.zip --title 'Financeiro Master Pro 2026.528' --notes 'Desempenho: consultas paginadas e totais SQL por empresa, pesquisa em todo o historico e painel agregado. Anexos de documentos por lancamento copiados no banco da empresa e incluidos no backup. Extrato ampliado das faturas com conferencia persistente independente da baixa, anexos e estados por empresa. Validacao Windows com bases sinteticas de 500 mil e 100 mil lancamentos, 30 suites, backup real, instalacao e rollback. Fonte 8f5443bcd59481c55c97684ef69227442a3b7326.'
+            gh release create 2026.528 pacote/FinanceiroMasterPro_Atualizacao_2026.528_FINAL.zip --title 'Financeiro Master Pro 2026.528' --notes 'Desempenho: consultas paginadas e totais SQL por empresa, pesquisa em todo o historico e painel agregado. Anexos de documentos por lancamento copiados no banco da empresa e incluidos no backup. Extrato ampliado das faturas com conferencia persistente independente da baixa, anexos e estados por empresa. Validacao Windows com bases sinteticas de 500 mil e 100 mil lancamentos, 30 suites, backup real, instalacao e rollback. Fonte db35d895e017beb00fa4719ff54db000644b4ad1.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
