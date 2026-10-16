@@ -1,0 +1,156 @@
+name: Validar e publicar Financeiro Master Pro 2026.525
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validar-publicar-525.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publicar-525
+  cancel-in-progress: false
+
+jobs:
+  compilar-validar:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      SOURCE_PAT: ${{ secrets.FMP_SOURCE_TOKEN || secrets.PUBLICAR_ATUALIZACAO_TOKEN || secrets.FINANCEIRO_GITHUB_TOKEN }}
+    steps:
+      - name: Verificar acesso ao codigo-fonte privado
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_PAT)) {
+            throw 'Sem credencial GitHub no repositorio publico para ler a fonte privada. Configure FMP_SOURCE_TOKEN com acesso de leitura. NENHUM ZIP SERA PUBLICADO.'
+          }
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Obter fonte privada sem publica-la
+        uses: actions/checkout@v4
+        with:
+          repository: FinanceiroMasterPro/FinanceiroMasterPro-Fonte
+          ref: c153e4d667886f25dd1ce9e788c59c26661fa767
+          token: ${{ secrets.FMP_SOURCE_TOKEN || secrets.PUBLICAR_ATUALIZACAO_TOKEN || secrets.FINANCEIRO_GITHUB_TOKEN }}
+          path: fonte
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Conferir fonte e preparar OCR protegido
+        shell: pwsh
+        run: |
+          $commit = (git -C fonte rev-parse HEAD).Trim()
+          if ($commit -ne 'c153e4d667886f25dd1ce9e788c59c26661fa767') { throw "Commit diferente do aprovado: $commit" }
+          $ocrDir='fonte/app/src/FinanceiroMasterPro.Desktop/tessdata'
+          New-Item -ItemType Directory $ocrDir -Force | Out-Null
+          Invoke-WebRequest 'https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/por.traineddata' -OutFile "$ocrDir/por.traineddata"
+          if ((Get-FileHash "$ocrDir/por.traineddata" -Algorithm SHA256).Hash -ne 'c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb') { throw 'OCR divergente' }
+      - name: Compilar aplicativo para Windows
+        shell: pwsh
+        run: |
+          dotnet publish fonte/app/src/FinanceiroMasterPro.Desktop/FinanceiroMasterPro.Desktop.csproj -c Release -r win-x64 --self-contained false -o compilado
+          if ($LASTEXITCODE -ne 0) { throw 'Compilacao Windows falhou' }
+          if (!(Test-Path compilado/FinanceiroMasterPro.dll) -or !(Test-Path compilado/FinanceiroMasterPro.exe)) { throw 'Executavel ausente' }
+          $origem = (Get-FileHash compilado/FinanceiroMasterPro.dll -Algorithm SHA256).Hash
+          Set-Content -Path hash-fonte.txt -Value $origem
+          Write-Host "DLL COMPROVADA: $origem"
+      - name: Testes obrigatorios de Excel e Cadastro Unico
+        timeout-minutes: 12
+        shell: pwsh
+        run: |
+          foreach ($teste in @('DfcExcel524','CadastroImportador515','ImportacaoCadastros','CadastroUnico','CadastroLancamentos','GrupoFluxoLancamentos','IdentidadePlano')) {
+            Write-Host "TESTANDO $teste"
+            $projeto = "fonte/tests/$teste/$teste.csproj"
+            dotnet build $projeto -c Release
+            if ($LASTEXITCODE -ne 0) { throw "Falha de compilacao no teste $teste" }
+            $dir = "fonte/tests/$teste/bin/Release/net10.0-windows"
+            Copy-Item fonte/app/src/FinanceiroMasterPro.Desktop/App.xaml "$dir/AppEstilos.xaml" -Force
+            dotnet "$dir/$teste.dll"
+            if ($LASTEXITCODE -ne 0) { throw "Teste reprovado: $teste" }
+          }
+          dotnet 'fonte/tests/CadastroImportador515/bin/Release/net10.0-windows/CadastroImportador515.dll' importacao
+          if ($LASTEXITCODE -ne 0) { throw 'Cadastro importador 515 reprovado' }
+          dotnet 'fonte/tests/CadastroImportador515/bin/Release/net10.0-windows/CadastroImportador515.dll' legado
+          if ($LASTEXITCODE -ne 0) { throw 'Recuperacao legado reprovada' }
+      - name: Testes essenciais de regressoes
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          foreach ($teste in @('ClassificacaoGlobal','ClassificacaoAssistida512','LancamentosPesquisa','ConsultaSessao518','CorrecoesImportacao514','Produtos523','Precificacao523','BandeirasBackup514','Layout522','TransferenciasExtrato')) {
+            Write-Host "REGRESSAO $teste"
+            $projeto = "fonte/tests/$teste/$teste.csproj"
+            dotnet build $projeto -c Release
+            if ($LASTEXITCODE -ne 0) { throw "Falha de compilacao da regressao $teste" }
+            $dir = "fonte/tests/$teste/bin/Release/net10.0-windows"
+            Copy-Item fonte/app/src/FinanceiroMasterPro.Desktop/App.xaml "$dir/AppEstilos.xaml" -Force
+            dotnet "$dir/$teste.dll"
+            if ($LASTEXITCODE -ne 0) { throw "Regressao: $teste" }
+          }
+      - name: Preparar pacote usando atualizacao anterior aprovada
+        shell: pwsh
+        run: |
+          $base='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.524/FinanceiroMasterPro_Atualizacao_2026.524_FINAL.zip'
+          Invoke-WebRequest $base -OutFile base524.zip
+          if ((Get-FileHash base524.zip -Algorithm SHA256).Hash -ne '781d1fc2b9cbbfc7f1ba70766facce02e81b50a7ab4de7a8b3b0bffab911db11') { throw 'Pacote-base 2026.524 divergente' }
+          Expand-Archive base524.zip -DestinationPath pacote -Force
+          Copy-Item compilado/* pacote/ -Recurse -Force
+          $shaEsperado = (Get-Content hash-fonte.txt).Trim()
+          if ((Get-FileHash pacote/FinanceiroMasterPro.dll -Algorithm SHA256).Hash -ne $shaEsperado) { throw 'Pacote nao contem DLL compilada' }
+          foreach ($arquivo in @('FinanceiroMasterPro.exe','FinanceiroMasterPro.dll','FinanceiroMasterPro.runtimeconfig.json','Atualizar-FinanceiroMasterPro.ps1','INSTALAR-ATUALIZACAO.cmd','tessdata/por.traineddata','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
+            if (!(Test-Path "pacote/$arquivo")) { throw "Arquivo obrigatorio ausente: $arquivo" }
+          }
+          if (Test-Path pacote/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso encontrado' }
+          if (@(Get-ChildItem pacote -Recurse -File | Where-Object { $_.Extension -in @('.db','.sqlite','.sqlite3') }).Count -gt 0) { throw 'Banco de dados indevidamente incluido' }
+          Compress-Archive -Path pacote/* -DestinationPath FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip -Force
+          Expand-Archive FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip -DestinationPath conferencia -Force
+          if ((Get-FileHash conferencia/FinanceiroMasterPro.dll -Algorithm SHA256).Hash -ne $shaEsperado) { throw 'DLL extraida nao e a DLL compilada' }
+          Get-FileHash FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip -Algorithm SHA256 | Format-List
+          Copy-Item pacote publicado -Recurse -Force
+      - name: Testar instalacao manual automatica e rollback
+        timeout-minutes: 6
+        shell: pwsh
+        run: |
+          & fonte/tests/Instalador/Testar-Instalador.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip
+          if ($LASTEXITCODE -ne 0) { throw 'Instalador reprovado' }
+          & fonte/tests/Instalador/Testar-Bloqueios.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip
+          if ($LASTEXITCODE -ne 0) { throw 'Bloqueios/rollback reprovados' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacote-525-aprovado
+          path: FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip
+          retention-days: 7
+
+  publicar:
+    needs: compilar-validar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacote-525-aprovado
+          path: pacote
+      - name: Conferir integridade do pacote aprovado
+        shell: bash
+        run: |
+          unzip -t pacote/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip
+          sha256sum pacote/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip | awk '{print $1}' > hash-aprovado.txt
+      - name: Criar versao 2026.525 apenas se testes passaram
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          gh release create 2026.525 pacote/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip --title 'Financeiro Master Pro 2026.525' --notes 'Excel e Cadastro Unico: leitura das quatro abas, regras completas inclusive sem movimentos, preservacao de listas independentes sem associacoes inventadas, reconhecimento das classificacoes em todas as abas, compatibilidade com plano B/C/D legado e verificacao dos vinculos reais; testes Windows e rollback.' --verify-tag
+      - name: Confirmar download publico e hash SHA256
+        shell: bash
+        run: |
+          url='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.525/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip'
+          curl --fail --location --retry 4 --retry-delay 3 "$url" --output baixado525.zip
+          echo "$(cat hash-aprovado.txt)  baixado525.zip" | sha256sum --check
+          unzip -t baixado525.zip
+          echo "DOWNLOAD PUBLICO E SHA256 VERIFICADOS: $url"
