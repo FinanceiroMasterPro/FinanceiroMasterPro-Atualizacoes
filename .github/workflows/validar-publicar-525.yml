@@ -145,7 +145,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.525 pacote/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip --title 'Financeiro Master Pro 2026.525' --notes 'Excel e Cadastro Unico: leitura das quatro abas, regras completas inclusive sem movimentos, preservacao de listas independentes sem associacoes inventadas, reconhecimento das classificacoes em todas as abas, compatibilidade com plano B/C/D legado e verificacao dos vinculos reais; testes Windows e rollback.' --verify-tag
+          gh release create 2026.525 pacote/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip --title 'Financeiro Master Pro 2026.525' --notes 'Excel e Cadastro Unico: leitura das quatro abas, regras completas inclusive sem movimentos, preservacao de listas independentes sem associacoes inventadas, reconhecimento das classificacoes em todas as abas, compatibilidade com plano B/C/D legado e verificacao dos vinculos reais; testes Windows e rollback.'
       - name: Confirmar download publico e hash SHA256
         shell: bash
         run: |
