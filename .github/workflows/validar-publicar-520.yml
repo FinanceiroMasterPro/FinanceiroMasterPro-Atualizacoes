@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/520.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '1065e76fa661b80dd822903aae71b389175f9328b8d3e2176c1d98385461b8b2') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '5c5fcdcda79d2fc608b5a2b4ce1e25146cc484636464ae8ec9e89d6927175964') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '03ad77127d89cba4667fd004dda08fec7c898e0e') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '2507a1fedb3b2fc38a2eaea803cbd1df95241c03') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.519/FinanceiroMasterPro_Atualizacao_2026.519_FINAL.zip' -OutFile base519.zip
           if ((Get-FileHash base519.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base519.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 03ad77127d89cba4667fd004dda08fec7c898e0e.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 2507a1fedb3b2fc38a2eaea803cbd1df95241c03.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -181,7 +181,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.520 pacote/FinanceiroMasterPro_Atualizacao_2026.520_FINAL.zip --title 'Financeiro Master Pro 2026.520' --notes 'Aviso automatico dos aniversariantes ativos de hoje ao abrir o sistema, por empresa e dia, com clientes/fornecedores, aniversario de fundacao da empresa e aniversario do contato. Lista com telefones, contato e email para cumprimentos, botao para reabrir e acesso ao cadastro pelo codigo. Conferencia periodica permite avisos na virada do dia, sem repetir o popup ja visto na mesma sessao/dia/empresa. Aniversario de 29/02 lembrado em 28/02 em anos nao bissextos. Formulario esquerdo do cadastro levemente compactado, mantendo largura e fontes, para eliminar rolagem vertical; cinco abas validadas em 1366x768. 21 suites Windows e instalacao/rollback/bloqueios aprovados. Fonte 03ad77127d89cba4667fd004dda08fec7c898e0e. Download publico e SHA256 verificados.'
+          gh release create 2026.520 pacote/FinanceiroMasterPro_Atualizacao_2026.520_FINAL.zip --title 'Financeiro Master Pro 2026.520' --notes 'Aviso automatico dos aniversariantes ativos de hoje ao abrir o sistema, por empresa e dia, com clientes/fornecedores, aniversario de fundacao da empresa e aniversario do contato. Lista com telefones, contato e email para cumprimentos, botao para reabrir e acesso ao cadastro pelo codigo. Conferencia periodica permite avisos na virada do dia, sem repetir o popup ja visto na mesma sessao/dia/empresa. Aniversario de 29/02 lembrado em 28/02 em anos nao bissextos. Formulario esquerdo do cadastro levemente compactado, mantendo largura e fontes, para eliminar rolagem vertical; cinco abas validadas em 1366x768. 21 suites Windows e instalacao/rollback/bloqueios aprovados. Fonte 2507a1fedb3b2fc38a2eaea803cbd1df95241c03. Download publico e SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
