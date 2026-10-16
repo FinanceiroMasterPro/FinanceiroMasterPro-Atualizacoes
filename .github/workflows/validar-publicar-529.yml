@@ -42,10 +42,10 @@ jobs:
             } finally { $saida.Dispose() }
             if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
           }
-          if ((Get-FileHash '.github/validacao/529.zip' -Algorithm SHA256).Hash -ne '1cac637ad03a7ffdde4503dceb3f2333e92070d80e6300fcd4708ba97520e03a') { throw 'Transporte 529 divergente.' }
+          if ((Get-FileHash '.github/validacao/529.zip' -Algorithm SHA256).Hash -ne '6fdf66d68a36a5dce52308ac3d1413def159cbda92b064d76de49131d12b1d28') { throw 'Transporte 529 divergente.' }
           Expand-Archive '.github/validacao/529.zip' -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne 'd1b1ede3dd67814ac70c81946a44837d2fc8f182') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'a1f2852ac8db103317b680a34e6ea2d91daf97df') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.528/FinanceiroMasterPro_Atualizacao_2026.528_FINAL.zip' -OutFile base528.zip
           if ((Get-FileHash base528.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base528.zip -DestinationPath app
@@ -57,7 +57,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte d1b1ede3dd67814ac70c81946a44837d2fc8f182.'
+          Write-Host 'Binarios conferidos com compilacao da fonte a1f2852ac8db103317b680a34e6ea2d91daf97df.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -220,9 +220,9 @@ jobs:
         run: |
           if gh release view 2026.529 >/dev/null 2>&1; then
             gh release upload 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --clobber
-            gh release edit 2026.529 --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte d1b1ede3dd67814ac70c81946a44837d2fc8f182.'
+            gh release edit 2026.529 --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte a1f2852ac8db103317b680a34e6ea2d91daf97df.'
           else
-            gh release create 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte d1b1ede3dd67814ac70c81946a44837d2fc8f182.'
+            gh release create 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte a1f2852ac8db103317b680a34e6ea2d91daf97df.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
