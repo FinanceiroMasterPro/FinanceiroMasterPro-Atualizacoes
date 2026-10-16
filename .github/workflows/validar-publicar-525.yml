@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: FinanceiroMasterPro/FinanceiroMasterPro-Fonte
-          ref: c153e4d667886f25dd1ce9e788c59c26661fa767
+          ref: 0e832b5bf87b60c2260e5fc3e89201338a1ca9bf
           token: ${{ secrets.FMP_SOURCE_TOKEN || secrets.PUBLICAR_ATUALIZACAO_TOKEN || secrets.FINANCEIRO_GITHUB_TOKEN }}
           path: fonte
           persist-credentials: false
@@ -43,7 +43,7 @@ jobs:
         shell: pwsh
         run: |
           $commit = (git -C fonte rev-parse HEAD).Trim()
-          if ($commit -ne 'c153e4d667886f25dd1ce9e788c59c26661fa767') { throw "Commit diferente do aprovado: $commit" }
+          if ($commit -ne '0e832b5bf87b60c2260e5fc3e89201338a1ca9bf') { throw "Commit diferente do aprovado: $commit" }
           $ocrDir='fonte/app/src/FinanceiroMasterPro.Desktop/tessdata'
           New-Item -ItemType Directory $ocrDir -Force | Out-Null
           Invoke-WebRequest 'https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/por.traineddata' -OutFile "$ocrDir/por.traineddata"
