@@ -25,7 +25,7 @@ jobs:
           $transporte = '.github/validacao/525.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '7e69cc5e4f26f68485b6713bc0a60a96f0812a576b9143e1955536033ff7309d') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
-          if ((Get-FileHash '.github/validacao/526-fix.zip' -Algorithm SHA256).Hash -ne '95722d4880728a4c19d47799181c95e338d0b307ada5a867c22cb8ce8eeb7184') { throw 'Complemento divergente.' }
+          if ((Get-FileHash '.github/validacao/526-fix.zip' -Algorithm SHA256).Hash -ne '353b94cc240f79b1af3c60c7a5563fbff282041dcce7f6b278c0be586aa2e8cc') { throw 'Complemento divergente.' }
           Expand-Archive '.github/validacao/526-fix.zip' -DestinationPath qa -Force
           $delta = Get-Content qa/delta526.json -Raw | ConvertFrom-Json -AsHashtable
           foreach ($item in $delta.GetEnumerator()) {
@@ -43,7 +43,7 @@ jobs:
             if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
           }
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '1842612aac818741e0653f94204bc923a65d851e') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'e2a1cb76f64c78f77023011ff5ef3850b6fbf2aa') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.525/FinanceiroMasterPro_Atualizacao_2026.525_FINAL.zip' -OutFile base525.zip
           if ((Get-FileHash base525.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base525.zip -DestinationPath app
@@ -55,7 +55,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 1842612aac818741e0653f94204bc923a65d851e.'
+          Write-Host 'Binarios conferidos com compilacao da fonte e2a1cb76f64c78f77023011ff5ef3850b6fbf2aa.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -214,9 +214,9 @@ jobs:
         run: |
           if gh release view 2026.526 >/dev/null 2>&1; then
             gh release upload 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --clobber
-            gh release edit 2026.526 --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte 1842612aac818741e0653f94204bc923a65d851e.'
+            gh release edit 2026.526 --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte e2a1cb76f64c78f77023011ff5ef3850b6fbf2aa.'
           else
-            gh release create 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte 1842612aac818741e0653f94204bc923a65d851e.'
+            gh release create 2026.526 pacote/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip --title 'Financeiro Master Pro 2026.526' --notes 'Lancamentos: digitar dia e mes completa o ano atual com barras; anos explicitos de seis e oito digitos preservados; Enter de Data Emissao avanca ao Cliente e classificacoes avancam entre campos. Troca individual de Centro, Grupo ou Fluxo preserva os outros campos e nao abre escolha de outro Plano. 27 suites Windows, importacao, backup, instalacao e rollback. Fonte e2a1cb76f64c78f77023011ff5ef3850b6fbf2aa.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
