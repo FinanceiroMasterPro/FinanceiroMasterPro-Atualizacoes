@@ -1,0 +1,252 @@
+name: Validar e publicar Financeiro Master Pro 2026.531
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/validar-publicar-531.yml', '.github/validacao/531.zip']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: validar-531
+  cancel-in-progress: true
+jobs:
+  validar:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Reconstruir pacote com binarios compilados da fonte privada
+        shell: pwsh
+        run: |
+          $transporte = '.github/validacao/525.zip'
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '7e69cc5e4f26f68485b6713bc0a60a96f0812a576b9143e1955536033ff7309d') { throw 'Transporte divergente.' }
+          Expand-Archive $transporte -DestinationPath qa
+          if ((Get-FileHash '.github/validacao/528-fix.zip' -Algorithm SHA256).Hash -ne '0381a066123c39c6670b2f74b65accdd48930437035347a1cd95c11a1f7686f6') { throw 'Complemento divergente.' }
+          Expand-Archive '.github/validacao/528-fix.zip' -DestinationPath qa -Force
+          $delta = Get-Content qa/delta528.json -Raw | ConvertFrom-Json -AsHashtable
+          foreach ($item in $delta.GetEnumerator()) {
+            $caminho = "qa/$($item.Key)"
+            if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.base) { throw "Base do complemento divergente: $caminho" }
+            $anterior = [IO.File]::ReadAllBytes($caminho)
+            $saida = [IO.MemoryStream]::new()
+            try {
+              foreach ($op in $item.Value.ops) {
+                if ($op.ContainsKey('copy')) { $saida.Write($anterior,[int]($op.copy[0]),[int]($op.copy[1])) }
+                else { $bloco = [Convert]::FromBase64String($op.data); $saida.Write($bloco,0,$bloco.Length) }
+              }
+              [IO.File]::WriteAllBytes($caminho,$saida.ToArray())
+            } finally { $saida.Dispose() }
+            if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
+          }
+          if ((Get-FileHash '.github/validacao/529.zip' -Algorithm SHA256).Hash -ne 'e79bc8f64ca12b0c23a1dbdc4df4f1d5886f83c0b8cc257af7002c1479ade053') { throw 'Transporte 529 divergente.' }
+          Expand-Archive '.github/validacao/529.zip' -DestinationPath qa -Force
+          if ((Get-FileHash '.github/validacao/530.zip' -Algorithm SHA256).Hash -ne '89d34e57e276af6a067766e39ba0280793af0f51033827235970687e5045accd') { throw 'Transporte 530 divergente.' }
+          Expand-Archive '.github/validacao/530.zip' -DestinationPath qa -Force
+          if ((Get-FileHash '.github/validacao/531.zip' -Algorithm SHA256).Hash -ne 'eeec2b431b782d9a35fdf66f81846eaf2f846576d7f7b2433f1827490a37300f') { throw 'Transporte 531 divergente.' }
+          Expand-Archive '.github/validacao/531.zip' -DestinationPath qa -Force
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          if ($manifest.source_commit -ne '590d15ec5991c278bbe5a6c2e6b934f9de604d93') { throw 'Fonte divergente.' }
+          Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.530/FinanceiroMasterPro_Atualizacao_2026.530_FINAL.zip' -OutFile base528.zip
+          if ((Get-FileHash base528.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
+          Expand-Archive base528.zip -DestinationPath app
+          Copy-Item qa/payload/* app/ -Recurse -Force
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "app/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Arquivo difere da compilacao: $arquivo" }
+          }
+          foreach ($arquivo in @('FinanceiroMasterPro.exe','FinanceiroMasterPro.dll','Atualizar-FinanceiroMasterPro.ps1','INSTALAR-ATUALIZACAO.cmd','tessdata/por.traineddata','Compartilhar/FinanceiroMasterPro.Compartilhar.exe','msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
+            if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
+          }
+          if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
+          Write-Host 'Binarios conferidos com compilacao da fonte 590d15ec5991c278bbe5a6c2e6b934f9de604d93.'
+      - name: Preparar estilos a partir dos recursos compilados
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory style-extractor -Force | Out-Null
+          @'
+          <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><Reference Include="FinanceiroMasterPro"><HintPath>../app/FinanceiroMasterPro.dll</HintPath></Reference></ItemGroup></Project>
+          '@ | Set-Content style-extractor/Extrair.csproj
+          @'
+          using System;
+          using System.IO;
+          using System.Linq;
+          using System.Windows.Markup;
+          using System.Xml.Linq;
+          class Program {
+           [STAThread]static void Main(string[] args){
+            var app=new FinanceiroMasterPro.Desktop.App();app.InitializeComponent();
+            var dic=XElement.Parse(XamlWriter.Save(app.Resources));
+            var ns=XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+            var declaracoes=dic.Attributes().Where(x=>x.IsNamespaceDeclaration).ToArray();
+            foreach(var estilo in dic.Elements())foreach(var d in declaracoes)if(estilo.Attribute(d.Name)==null)estilo.Add(new XAttribute(d));
+            var documento=new XElement(ns+"Application",new XElement(ns+"Application.Resources",dic.Elements()));
+            File.WriteAllText(args[0],documento.ToString());
+            Console.WriteLine("Estilos extraidos dos recursos compilados: "+dic.Elements().Count());
+            var cartao=new FinanceiroMasterPro.Desktop.Views.CartaoCreditoView();
+            var grade=(System.Windows.Controls.DataGrid)cartao.FindName("GridFatura");
+            var cab=new System.Windows.Controls.Primitives.DataGridColumnHeader{Style=grade.ColumnHeaderStyle};
+            if(cab.FontWeight!=System.Windows.FontWeights.Bold)throw new Exception("Cabecalho sem negrito.");
+            var fluxo=grade.Columns.OfType<System.Windows.Controls.DataGridBoundColumn>().Single(c=>c.Header?.ToString()=="FLUXO DE CAIXA");
+            if((fluxo.Binding as System.Windows.Data.Binding)?.Path.Path!="FluxoCaixaNome")throw new Exception("Coluna fluxo sem vinculo.");
+            var linhaTipo=typeof(FinanceiroMasterPro.Desktop.Views.CartaoCreditoView).GetNestedType("Linha");
+            var ctor=linhaTipo.GetConstructors().Single();var modelo=Activator.CreateInstance(ctor.GetParameters()[0].ParameterType);
+            modelo.GetType().GetProperty("FluxoCaixaNome").SetValue(modelo,"FLUXO VALIDADO 531");
+            var linha=ctor.Invoke(new[]{modelo});
+            if(linhaTipo.GetProperty("FluxoCaixaNome").GetValue(linha)?.ToString()!="FLUXO VALIDADO 531")throw new Exception("Fluxo nao chegou a linha.");
+            Console.WriteLine("PASS531: cabecalho compilado em negrito e Fluxo de Caixa vinculado ao lancamento.");
+            Environment.Exit(0);
+           }
+          }
+          '@ | Set-Content style-extractor/Program.cs
+          dotnet build style-extractor/Extrair.csproj -c Release -o style-extractor/bin
+          if ($LASTEXITCODE -ne 0) { throw 'Extrator de recursos nao compilou.' }
+          Copy-Item app/* style-extractor/bin/ -Recurse -Force
+          dotnet style-extractor/bin/Extrair.dll AppEstilos.xaml
+          if ($LASTEXITCODE -ne 0) { throw 'Estilos compilados nao extraidos.' }
+      - name: Validar desempenho 500k anexos backup faturas Excel e lancamentos
+        timeout-minutes: 8
+        shell: pwsh
+        run: |
+          foreach ($teste in @('CorrecoesCartao530','CartaoIntegrado529','Desempenho528','Integracao528','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano')) {
+            $destino = "test-produtos/$teste"
+            New-Item -ItemType Directory $destino -Force | Out-Null
+            Copy-Item app/* "$destino/" -Recurse -Force
+            Copy-Item "qa/tests/$teste/*" "$destino/" -Force
+            Copy-Item AppEstilos.xaml "$destino/AppEstilos.xaml"
+            dotnet "$destino/$teste.dll"
+            if ($LASTEXITCODE -ne 0) { throw "Falhou: $teste" }
+          }
+      - name: Validar restauracao real do formato
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          dotnet test-produtos/DfcExcel524/DfcExcel524.dll backup
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou restauracao do formato.' }
+      - name: Executar testes reais de contas importacao pesquisa e leitores
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
+          $falhas = @()
+          foreach ($teste in ($testes | Where-Object { $_ -notin @('CorrecoesCartao530','CartaoIntegrado529','Desempenho528','Integracao528','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano') })) {
+            $destino = "test-executaveis/$teste"
+            New-Item -ItemType Directory $destino -Force | Out-Null
+            Copy-Item app/* "$destino/" -Recurse -Force
+            Copy-Item "qa/tests/$teste/*" "$destino/" -Force
+            Copy-Item AppEstilos.xaml "$destino/AppEstilos.xaml"
+            Write-Host "TESTE: $teste"
+            dotnet "$destino/$teste.dll"
+            if ($LASTEXITCODE -ne 0) { $falhas += $teste }
+          }
+          if ($falhas.Count -gt 0) { throw "Falharam: $($falhas -join ', ')"
+          }
+      - name: Validar importacao sem Aplicar e recuperacao de cadastros antigos
+        shell: pwsh
+        run: |
+          dotnet test-executaveis/CadastroImportador515/CadastroImportador515.dll importacao
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou registro atomico na importacao.' }
+          dotnet test-executaveis/CadastroImportador515/CadastroImportador515.dll legado
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou recuperacao de combinacoes de extratos anteriores.' }
+      - name: Guardar capturas reais
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cartao531-capturas
+          path: |
+            validacao-cartao530/*.png
+            validacao-cartao529/*.png
+            validacao-integracao528/*.png
+            validacao-identidade/*.png
+            validacao-desempenho528/medicoes.json
+            validacao-teclado526/*.png
+            validacao-dfc524/*.png
+            validacao-produtos523/*.png
+            validacao-layout522/*.png
+            validacao-alinhamento521/*.png
+            validacao-aniversarios520/*.png
+            validacao-enter519/*.png
+            validacao-consulta518/*.png
+            validacao-clientes518/*.png
+            validacao-lote517/*.png
+            validacao-calculadora517/*.png
+            validacao-operacoes/*.png
+            validacao-limpeza516/*.png
+            validacao-cadastro515/*.png
+            validacao-correcoes514/*.png
+            validacao-assistida511/*.png
+            validacao-colunas510/*.png
+            validacao-identificados509/*.png
+            validacao-padrao507/*.png
+            validacao-previa506/*.png
+            validacao-contas502/*.png
+            validacao-reuso503/*.png
+            validacao-melhorias504/*.png
+            validacao-arquivos505/*.png
+            validacao-transferencias/*.png
+            validacao-pesquisa500/*.png
+      - name: Montar e conferir ZIP final
+        shell: pwsh
+        run: |
+          Compress-Archive -Path app/* -DestinationPath FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip -Force
+          Expand-Archive FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip -DestinationPath pacote-verificado
+          $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
+          foreach ($arquivo in $manifest.files.Keys) {
+            if ((Get-FileHash "pacote-verificado/$arquivo" -Algorithm SHA256).Hash -ne $manifest.files[$arquivo]) { throw "Binario do ZIP difere da compilacao: $arquivo" }
+          }
+      - name: Testar instalacao automatica manual e rollback
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          Copy-Item app publicado -Recurse -Force
+          & qa/installer-tests/Testar-Instalador.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip
+      - name: Testar aplicativo aberto e arquivos bloqueados
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          & qa/installer-tests/Testar-Bloqueios.ps1 -PackagePath FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip
+      - name: Guardar somente pacote aprovado
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacote531
+          path: FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip
+
+  publicar:
+    needs: validar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacote531
+          path: pacote
+      - name: Validar pacote aprovado
+        shell: bash
+        run: |
+          unzip -t pacote/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip
+          sha256sum pacote/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip | awk '{print $1}' > hash-aprovado.txt
+      - name: Publicar atualizacao aprovada
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
+        shell: bash
+        run: |
+          if gh release view 2026.531 >/dev/null 2>&1; then
+            gh release upload 2026.531 pacote/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip --clobber
+            gh release edit 2026.531 --title 'Financeiro Master Pro 2026.531' --notes 'Grade de lancamentos do cartao de credito com cabecalhos em negrito e coluna FLUXO DE CAIXA apos GRUPO DE CONTAS. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 590d15ec5991c278bbe5a6c2e6b934f9de604d93.'
+          else
+            gh release create 2026.531 pacote/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip --title 'Financeiro Master Pro 2026.531' --notes 'Grade de lancamentos do cartao de credito com cabecalhos em negrito e coluna FLUXO DE CAIXA apos GRUPO DE CONTAS. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 590d15ec5991c278bbe5a6c2e6b934f9de604d93.'
+          fi
+      - name: Confirmar download publico e SHA256
+        shell: bash
+        run: |
+          url='https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.531/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip'
+          curl --fail --location --retry 4 --retry-delay 3 "$url" --output baixado528.zip
+          echo "$(cat hash-aprovado.txt)  baixado528.zip" | sha256sum --check
+          unzip -t baixado528.zip
+          echo "DOWNLOAD PUBLICO E SHA256 VERIFICADOS: $url"
+
