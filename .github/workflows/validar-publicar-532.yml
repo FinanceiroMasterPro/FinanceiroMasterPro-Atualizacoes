@@ -48,10 +48,10 @@ jobs:
           Expand-Archive '.github/validacao/530.zip' -DestinationPath qa -Force
           if ((Get-FileHash '.github/validacao/531.zip' -Algorithm SHA256).Hash -ne 'eeec2b431b782d9a35fdf66f81846eaf2f846576d7f7b2433f1827490a37300f') { throw 'Transporte 531 divergente.' }
           Expand-Archive '.github/validacao/531.zip' -DestinationPath qa -Force
-          if ((Get-FileHash '.github/validacao/532.zip' -Algorithm SHA256).Hash -ne '67b9abf43d77eecec0844ead60babb77dc223f5acedbadf3c8da7bfa1789a9dc') { throw 'Transporte 532 divergente.' }
+          if ((Get-FileHash '.github/validacao/532.zip' -Algorithm SHA256).Hash -ne 'a9830933b7c4c84159f1d5b0d45a2d2df6758c85f57263572cfeeccaf7c609f4') { throw 'Transporte 532 divergente.' }
           Expand-Archive '.github/validacao/532.zip' -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '84e0d0307f7c765f28ed3caa3e9aaaf773b487f3') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '9b218647f692d6454996470c2438ead7542d004f') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.531/FinanceiroMasterPro_Atualizacao_2026.531_FINAL.zip' -OutFile base528.zip
           if ((Get-FileHash base528.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base528.zip -DestinationPath app
@@ -63,7 +63,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 84e0d0307f7c765f28ed3caa3e9aaaf773b487f3.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 9b218647f692d6454996470c2438ead7542d004f.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -240,9 +240,9 @@ jobs:
         run: |
           if gh release view 2026.532 >/dev/null 2>&1; then
             gh release upload 2026.532 pacote/FinanceiroMasterPro_Atualizacao_2026.532_FINAL.zip --clobber
-            gh release edit 2026.532 --title 'Financeiro Master Pro 2026.532' --notes 'Tela geral de Lancamentos com painel compacto no estilo do cartao, campos alinhados e mais espaco para a grade. Preservados resumo de contas, filtros, lupas e acoes. Seis titulos do resumo do cartao em negrito. Versao 2026.531 preservada para retorno. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 84e0d0307f7c765f28ed3caa3e9aaaf773b487f3.'
+            gh release edit 2026.532 --title 'Financeiro Master Pro 2026.532' --notes 'Tela geral de Lancamentos com painel compacto no estilo do cartao, campos alinhados e mais espaco para a grade. Preservados resumo de contas, filtros, lupas e acoes. Seis titulos do resumo do cartao em negrito. Versao 2026.531 preservada para retorno. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 9b218647f692d6454996470c2438ead7542d004f.'
           else
-            gh release create 2026.532 pacote/FinanceiroMasterPro_Atualizacao_2026.532_FINAL.zip --title 'Financeiro Master Pro 2026.532' --notes 'Tela geral de Lancamentos com painel compacto no estilo do cartao, campos alinhados e mais espaco para a grade. Preservados resumo de contas, filtros, lupas e acoes. Seis titulos do resumo do cartao em negrito. Versao 2026.531 preservada para retorno. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 84e0d0307f7c765f28ed3caa3e9aaaf773b487f3.'
+            gh release create 2026.532 pacote/FinanceiroMasterPro_Atualizacao_2026.532_FINAL.zip --title 'Financeiro Master Pro 2026.532' --notes 'Tela geral de Lancamentos com painel compacto no estilo do cartao, campos alinhados e mais espaco para a grade. Preservados resumo de contas, filtros, lupas e acoes. Seis titulos do resumo do cartao em negrito. Versao 2026.531 preservada para retorno. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 9b218647f692d6454996470c2438ead7542d004f.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
