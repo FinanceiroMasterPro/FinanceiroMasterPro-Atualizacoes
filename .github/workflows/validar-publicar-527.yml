@@ -25,7 +25,7 @@ jobs:
           $transporte = '.github/validacao/525.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '7e69cc5e4f26f68485b6713bc0a60a96f0812a576b9143e1955536033ff7309d') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
-          if ((Get-FileHash '.github/validacao/527-fix.zip' -Algorithm SHA256).Hash -ne 'a26ea2a78ac545ff267df0842bfcf668e8d172e6c7ad68004793b6d2ce75b89d') { throw 'Complemento divergente.' }
+          if ((Get-FileHash '.github/validacao/527-fix.zip' -Algorithm SHA256).Hash -ne 'b0c8a87617cbffd466f612155347bb6f9b98d0f0aaa75e097ecfea6498ff874f') { throw 'Complemento divergente.' }
           Expand-Archive '.github/validacao/527-fix.zip' -DestinationPath qa -Force
           $delta = Get-Content qa/delta527.json -Raw | ConvertFrom-Json -AsHashtable
           foreach ($item in $delta.GetEnumerator()) {
@@ -43,7 +43,7 @@ jobs:
             if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
           }
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '0dfeaf43dd46c26e702a08bec3a1f382515db52c') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '30d949d29c16b0d05478c6a7e93d89ccb365cf7b') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.526/FinanceiroMasterPro_Atualizacao_2026.526_FINAL.zip' -OutFile base526.zip
           if ((Get-FileHash base526.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base526.zip -DestinationPath app
@@ -55,7 +55,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 0dfeaf43dd46c26e702a08bec3a1f382515db52c.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 30d949d29c16b0d05478c6a7e93d89ccb365cf7b.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -214,9 +214,9 @@ jobs:
         run: |
           if gh release view 2026.527 >/dev/null 2>&1; then
             gh release upload 2026.527 pacote/FinanceiroMasterPro_Atualizacao_2026.527_FINAL.zip --clobber
-            gh release edit 2026.527 --title 'Financeiro Master Pro 2026.527' --notes 'Excel: aba PLANO DE CONTAS e fonte do catalogo quando presente. CONSOLIDADO e LANCAMENTOS importam movimentos sem cadastrar outros planos ou combinacoes. Previa e reabertura respeitam a origem; valores, centros individuais e anotacoes preservados; planos ausentes no catalogo mantidos nas anotacoes para revisao. 28 suites Windows, importacao, backup, instalacao e rollback. Fonte 0dfeaf43dd46c26e702a08bec3a1f382515db52c.'
+            gh release edit 2026.527 --title 'Financeiro Master Pro 2026.527' --notes 'Excel: aba PLANO DE CONTAS e fonte do catalogo quando presente. CONSOLIDADO e LANCAMENTOS importam movimentos sem cadastrar outros planos ou combinacoes. Previa e reabertura respeitam a origem; valores, centros individuais e anotacoes preservados; planos ausentes no catalogo mantidos nas anotacoes para revisao. 28 suites Windows, importacao, backup, instalacao e rollback. Fonte 30d949d29c16b0d05478c6a7e93d89ccb365cf7b.'
           else
-            gh release create 2026.527 pacote/FinanceiroMasterPro_Atualizacao_2026.527_FINAL.zip --title 'Financeiro Master Pro 2026.527' --notes 'Excel: aba PLANO DE CONTAS e fonte do catalogo quando presente. CONSOLIDADO e LANCAMENTOS importam movimentos sem cadastrar outros planos ou combinacoes. Previa e reabertura respeitam a origem; valores, centros individuais e anotacoes preservados; planos ausentes no catalogo mantidos nas anotacoes para revisao. 28 suites Windows, importacao, backup, instalacao e rollback. Fonte 0dfeaf43dd46c26e702a08bec3a1f382515db52c.'
+            gh release create 2026.527 pacote/FinanceiroMasterPro_Atualizacao_2026.527_FINAL.zip --title 'Financeiro Master Pro 2026.527' --notes 'Excel: aba PLANO DE CONTAS e fonte do catalogo quando presente. CONSOLIDADO e LANCAMENTOS importam movimentos sem cadastrar outros planos ou combinacoes. Previa e reabertura respeitam a origem; valores, centros individuais e anotacoes preservados; planos ausentes no catalogo mantidos nas anotacoes para revisao. 28 suites Windows, importacao, backup, instalacao e rollback. Fonte 30d949d29c16b0d05478c6a7e93d89ccb365cf7b.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
