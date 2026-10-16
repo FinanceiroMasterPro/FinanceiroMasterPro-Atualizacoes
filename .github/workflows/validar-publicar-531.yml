@@ -91,7 +91,7 @@ jobs:
             if(cab.FontWeight!=System.Windows.FontWeights.Bold)throw new Exception("Cabecalho sem negrito.");
             var fluxo=grade.Columns.OfType<System.Windows.Controls.DataGridBoundColumn>().Single(c=>c.Header?.ToString()=="FLUXO DE CAIXA");
             if((fluxo.Binding as System.Windows.Data.Binding)?.Path.Path!="FluxoCaixaNome")throw new Exception("Coluna fluxo sem vinculo.");
-            var linhaTipo=typeof(FinanceiroMasterPro.Desktop.Views.CartaoCreditoView).GetNestedType("Linha");
+            var linhaTipo=typeof(FinanceiroMasterPro.Desktop.Views.CartaoCreditoView).GetNestedType("Linha",System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic);
             var ctor=linhaTipo.GetConstructors().Single();var modelo=Activator.CreateInstance(ctor.GetParameters()[0].ParameterType);
             modelo.GetType().GetProperty("FluxoCaixaNome").SetValue(modelo,"FLUXO VALIDADO 531");
             var linha=ctor.Invoke(new[]{modelo});
