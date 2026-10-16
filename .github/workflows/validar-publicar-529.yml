@@ -42,10 +42,10 @@ jobs:
             } finally { $saida.Dispose() }
             if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
           }
-          if ((Get-FileHash '.github/validacao/529.zip' -Algorithm SHA256).Hash -ne '5c6b06f46e1dc78fd373da0f284aaf655b7b2a9d000b712b8d9405efd3596ddb') { throw 'Transporte 529 divergente.' }
+          if ((Get-FileHash '.github/validacao/529.zip' -Algorithm SHA256).Hash -ne '0a5482a3cf20acb1ac1892cbdf90c10a245e8b5e999d52d37657af947e71e4e8') { throw 'Transporte 529 divergente.' }
           Expand-Archive '.github/validacao/529.zip' -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne 'b76b4c67836b6991f9482dfcf3bb815ca8885b3a') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'b7d0cc2f781a4ec6f129952810a55fae9a8da249') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.528/FinanceiroMasterPro_Atualizacao_2026.528_FINAL.zip' -OutFile base528.zip
           if ((Get-FileHash base528.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base528.zip -DestinationPath app
@@ -94,7 +94,7 @@ jobs:
         timeout-minutes: 8
         shell: pwsh
         run: |
-          foreach ($teste in @('Desempenho528','Integracao528','CartaoIntegrado529','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano')) {
+          foreach ($teste in @('CartaoIntegrado529','Desempenho528','Integracao528','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano')) {
             $destino = "test-produtos/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
             Copy-Item app/* "$destino/" -Recurse -Force
@@ -115,7 +115,7 @@ jobs:
         run: |
           $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
           $falhas = @()
-          foreach ($teste in ($testes | Where-Object { $_ -notin @('Desempenho528','Integracao528','CartaoIntegrado529','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano') })) {
+          foreach ($teste in ($testes | Where-Object { $_ -notin @('CartaoIntegrado529','Desempenho528','Integracao528','OrigemPlano527','LancamentosTeclado526','DfcExcel524','GrupoFluxoLancamentos','IdentidadePlano') })) {
             $destino = "test-executaveis/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
             Copy-Item app/* "$destino/" -Recurse -Force
@@ -220,9 +220,9 @@ jobs:
         run: |
           if gh release view 2026.529 >/dev/null 2>&1; then
             gh release upload 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --clobber
-            gh release edit 2026.529 --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte b76b4c67836b6991f9482dfcf3bb815ca8885b3a.'
+            gh release edit 2026.529 --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte b7d0cc2f781a4ec6f129952810a55fae9a8da249.'
           else
-            gh release create 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte b76b4c67836b6991f9482dfcf3bb815ca8885b3a.'
+            gh release create 2026.529 pacote/FinanceiroMasterPro_Atualizacao_2026.529_FINAL.zip --title 'Financeiro Master Pro 2026.529' --notes 'Tela do cartao com resumo compacto, campos alinhados, painel de lancamentos integrado e grade da fatura abaixo. Salvar e editar atualizam os totais sem sair do cartao. Preservados parcelamento, rateio, anexos, extrato e conciliacao. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte b7d0cc2f781a4ec6f129952810a55fae9a8da249.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
