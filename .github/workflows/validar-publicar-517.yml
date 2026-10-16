@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/517.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '6e028849d2ae2887450ed187f3fe215fe23521358f14f019b980c0709fbb4a25') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne '1fd6767d12b437e8be6f58ca797af593d811cd0f76c6134f1ff9a521d6ff4f24') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '61cff310f860db05ac9e50e227461164b9878bda') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '8b51d3278e714a060792eae6adf39d392aab382a') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.516/FinanceiroMasterPro_Atualizacao_2026.516_FINAL.zip' -OutFile base516.zip
           if ((Get-FileHash base516.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base516.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 61cff310f860db05ac9e50e227461164b9878bda.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 8b51d3278e714a060792eae6adf39d392aab382a.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -179,7 +179,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.517 pacote/FinanceiroMasterPro_Atualizacao_2026.517_FINAL.zip --title 'Financeiro Master Pro 2026.517' --notes 'Alteracao em lote ampliada para datas de pagamento/recebimento, emissao e baixa, periodo, cliente/fornecedor, descricao, documento e anotacoes, mantendo conta e quatro campos de classificacao. Controles de data e periodo, previa por escopo, qualquer origem opcional, exclusao de linhas sem mudanca, backup e transacao atomica com deteccao de concorrencia. Altera somente o campo escolhido. Calculadora aceita teclado, numeros, virgula/ponto, quatro operacoes, teclado numerico, Backspace/Delete/F9; Enter calcula, Ctrl+Enter usa o valor e Esc cancela. Falha anterior reproduzida na 516; 17 suites Windows e testes de instalacao/rollback/bloqueios aprovados. Fonte 61cff310f860db05ac9e50e227461164b9878bda. Download publico e SHA256 verificados.'
+          gh release create 2026.517 pacote/FinanceiroMasterPro_Atualizacao_2026.517_FINAL.zip --title 'Financeiro Master Pro 2026.517' --notes 'Alteracao em lote ampliada para datas de pagamento/recebimento, emissao e baixa, periodo, cliente/fornecedor, descricao, documento e anotacoes, mantendo conta e quatro campos de classificacao. Controles de data e periodo, previa por escopo, qualquer origem opcional, exclusao de linhas sem mudanca, backup e transacao atomica com deteccao de concorrencia. Altera somente o campo escolhido. Calculadora aceita teclado, numeros, virgula/ponto, quatro operacoes, teclado numerico, Backspace/Delete/F9; Enter calcula, Ctrl+Enter usa o valor e Esc cancela. Falha anterior reproduzida na 516; 17 suites Windows e testes de instalacao/rollback/bloqueios aprovados. Fonte 8b51d3278e714a060792eae6adf39d392aab382a. Download publico e SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
