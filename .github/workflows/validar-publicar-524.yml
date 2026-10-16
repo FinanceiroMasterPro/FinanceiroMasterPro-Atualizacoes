@@ -2,7 +2,7 @@ name: Validar Windows Financeiro Master Pro 2026.524
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/validar-publicar-524.yml', '.github/validacao/524.zip']
+    paths: ['.github/workflows/validar-publicar-524.yml', '.github/validacao/524.zip', '.github/validacao/524-fix.zip']
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,8 +25,25 @@ jobs:
           $transporte = '.github/validacao/524.zip'
           if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'be7f5716f2db74fd242bc0f977ca82591a6916cb5bb2b14c9d77d4f2cca3c186') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
+          if ((Get-FileHash '.github/validacao/524-fix.zip' -Algorithm SHA256).Hash -ne '5b605d407d72efb0d404407cf5ff9f9d9a3aad0a0ac8a584d112a5de0b8e2fce') { throw 'Complemento divergente.' }
+          Expand-Archive '.github/validacao/524-fix.zip' -DestinationPath qa -Force
+          $delta = Get-Content qa/delta524.json -Raw | ConvertFrom-Json -AsHashtable
+          foreach ($item in $delta.GetEnumerator()) {
+            $caminho = "qa/$($item.Key)"
+            if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.base) { throw "Base do complemento divergente: $caminho" }
+            $anterior = [IO.File]::ReadAllBytes($caminho)
+            $saida = [IO.MemoryStream]::new()
+            try {
+              foreach ($op in $item.Value.ops) {
+                if ($op.ContainsKey('copy')) { $saida.Write($anterior,[int]($op.copy[0]),[int]($op.copy[1])) }
+                else { $bloco = [Convert]::FromBase64String($op.data); $saida.Write($bloco,0,$bloco.Length) }
+              }
+              [IO.File]::WriteAllBytes($caminho,$saida.ToArray())
+            } finally { $saida.Dispose() }
+            if ((Get-FileHash $caminho -Algorithm SHA256).Hash -ne $item.Value.sha256) { throw "Complemento divergiu: $caminho" }
+          }
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '4c2813e23f54cb706921d87a468a5776edc85c68') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne '52989de4a127362457114be9fa58b043d4280f65') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.523/FinanceiroMasterPro_Atualizacao_2026.523_FINAL.zip' -OutFile base523.zip
           if ((Get-FileHash base523.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base523.zip -DestinationPath app
@@ -38,7 +55,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 4c2813e23f54cb706921d87a468a5776edc85c68.'
+          Write-Host 'Binarios conferidos com compilacao da fonte 52989de4a127362457114be9fa58b043d4280f65.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -75,7 +92,7 @@ jobs:
         timeout-minutes: 3
         shell: pwsh
         run: |
-          foreach ($teste in @('DfcExcel524')) {
+          foreach ($teste in @('DfcExcel524','GrupoFluxoLancamentos')) {
             $destino = "test-produtos/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
             Copy-Item app/* "$destino/" -Recurse -Force
@@ -96,7 +113,7 @@ jobs:
         run: |
           $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
           $falhas = @()
-          foreach ($teste in ($testes | Where-Object { $_ -ne 'DfcExcel524' })) {
+          foreach ($teste in ($testes | Where-Object { $_ -notin @('DfcExcel524','GrupoFluxoLancamentos') })) {
             $destino = "test-executaveis/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
             Copy-Item app/* "$destino/" -Recurse -Force
@@ -194,7 +211,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.524 pacote/FinanceiroMasterPro_Atualizacao_2026.524_FINAL.zip --title 'Financeiro Master Pro 2026.524' --notes 'DFC com hierarquia protegida: ordem original recuperada sem aproveitar o arquivo legado corrompido; cabecalhos nao ordenam linhas; contas e subtotais travados; somente fluxos do mesmo bloco podem mudar de posicao, sem cruzar subtotais. Larguras persistem e backup inclui ordem, periodo e preferencias, com snapshot e rollback; backup antigo sem formato usa ordem protegida padrao. Excel reconhece cabecalhos de classificacao, grava todas as combinacoes do catalogo e centros distintos no Cadastro Unico, inclusive sem movimento, completa formulas sem cache somente quando inequivoco, registra origem e recupera combinacoes usadas nas importacoes identificadas. Testes Windows, 26 suites, instalacao, rollback e bloqueios aprovados. Fonte 4c2813e23f54cb706921d87a468a5776edc85c68. Download publico e SHA256 verificados.'
+          gh release create 2026.524 pacote/FinanceiroMasterPro_Atualizacao_2026.524_FINAL.zip --title 'Financeiro Master Pro 2026.524' --notes 'DFC com hierarquia protegida: ordem original recuperada sem aproveitar o arquivo legado corrompido; cabecalhos nao ordenam linhas; contas e subtotais travados; somente fluxos do mesmo bloco podem mudar de posicao, sem cruzar subtotais. Larguras persistem e backup inclui ordem, periodo e preferencias, com snapshot e rollback; backup antigo sem formato usa ordem protegida padrao. Excel reconhece cabecalhos de classificacao, grava todas as combinacoes do catalogo e centros distintos no Cadastro Unico, inclusive sem movimento, completa formulas sem cache somente quando inequivoco, registra origem e recupera combinacoes usadas nas importacoes identificadas. Testes Windows, 26 suites, instalacao, rollback e bloqueios aprovados. Fonte 52989de4a127362457114be9fa58b043d4280f65. Download publico e SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
