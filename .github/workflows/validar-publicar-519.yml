@@ -23,10 +23,10 @@ jobs:
         shell: pwsh
         run: |
           $transporte = '.github/validacao/519.zip'
-          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'b529921de165e07bee3c5e2744799d64c81ff547c9b6e587aa038654fe470b8d') { throw 'Transporte divergente.' }
+          if ((Get-FileHash $transporte -Algorithm SHA256).Hash -ne 'a762fbf5c6cbcf78113e4b9fdb290b91324130fa75a64aa84cbe5cc195cbc613') { throw 'Transporte divergente.' }
           Expand-Archive $transporte -DestinationPath qa
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '8d4a9fe6fc2936208436d01f9a73f5eb4159ad7a') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'be12b21716b86c732310836019143b9e80a962c0') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.518/FinanceiroMasterPro_Atualizacao_2026.518_FINAL.zip' -OutFile base518.zip
           if ((Get-FileHash base518.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base518.zip -DestinationPath app
@@ -38,7 +38,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 8d4a9fe6fc2936208436d01f9a73f5eb4159ad7a.'
+          Write-Host 'Binarios conferidos com compilacao da fonte be12b21716b86c732310836019143b9e80a962c0.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -83,13 +83,23 @@ jobs:
           if ($codigo -eq 0 -or $saida -notmatch 'ENTER_NAO_AVANCOU_CAMPO') { throw 'Falha anterior nao reproduzida.' }
           Write-Host 'Falta de Enter reproduzida na 518.'
           exit 0
+      - name: Validar Enter antes das regressoes
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory test-enter -Force | Out-Null
+          Copy-Item app/* test-enter/ -Recurse -Force
+          Copy-Item qa/tests/EnterLote519/* test-enter/ -Force
+          Copy-Item AppEstilos.xaml test-enter/AppEstilos.xaml
+          dotnet test-enter/EnterLote519.dll
+          if ($LASTEXITCODE -ne 0) { throw 'Enter na Alteracao em Lote falhou.' }
       - name: Executar testes reais de contas importacao pesquisa e leitores
         timeout-minutes: 10
         shell: pwsh
         run: |
           $testes = (Get-Content qa/manifest.json -Raw | ConvertFrom-Json).tests
           $falhas = @()
-          foreach ($teste in $testes) {
+          foreach ($teste in ($testes | Where-Object { $_ -ne 'EnterLote519' })) {
             $destino = "test-executaveis/$teste"
             New-Item -ItemType Directory $destino -Force | Out-Null
             Copy-Item app/* "$destino/" -Recurse -Force
@@ -182,7 +192,7 @@ jobs:
           GH_REPO: FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes
         shell: bash
         run: |
-          gh release create 2026.519 pacote/FinanceiroMasterPro_Atualizacao_2026.519_FINAL.zip --title 'Financeiro Master Pro 2026.519' --notes 'Alteracao pontual na ALTERACAO EM LOTE: Enter avanca entre campos, mantendo TAB. Listas abertas confirmam a opcao pelo comportamento nativo antes de avancar; datas mantem confirmacao e navegacao sem avancar duas vezes. Navegacao nao aplica alteracoes automaticamente; botoes mantem suas acoes. Falha reproduzida na 518 publicada; 20 suites Windows aprovadas, incluindo mensagens reais de teclado, preservacao do TAB e dados intactos, alem de instalacao/rollback/bloqueios. Fonte 8d4a9fe6fc2936208436d01f9a73f5eb4159ad7a. Download publico e SHA256 verificados.'
+          gh release create 2026.519 pacote/FinanceiroMasterPro_Atualizacao_2026.519_FINAL.zip --title 'Financeiro Master Pro 2026.519' --notes 'Alteracao pontual na ALTERACAO EM LOTE: Enter avanca entre campos, mantendo TAB. Listas abertas confirmam a opcao pelo comportamento nativo antes de avancar; datas mantem confirmacao e navegacao sem avancar duas vezes. Navegacao nao aplica alteracoes automaticamente; botoes mantem suas acoes. Falha reproduzida na 518 publicada; 20 suites Windows aprovadas, incluindo mensagens reais de teclado, preservacao do TAB e dados intactos, alem de instalacao/rollback/bloqueios. Fonte be12b21716b86c732310836019143b9e80a962c0. Download publico e SHA256 verificados.'
       - name: Confirmar download publico e SHA256
         shell: bash
         run: |
