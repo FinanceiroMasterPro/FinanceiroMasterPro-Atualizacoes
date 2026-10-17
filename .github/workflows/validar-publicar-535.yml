@@ -54,10 +54,10 @@ jobs:
           Expand-Archive '.github/validacao/533.zip' -DestinationPath qa -Force
           if ((Get-FileHash '.github/validacao/534.zip' -Algorithm SHA256).Hash -ne '6f70259e048c0c945a755c9c05a4ea655ed7297c783323118f2aef42ad93d51f') { throw 'Transporte 534 divergente.' }
           Expand-Archive '.github/validacao/534.zip' -DestinationPath qa -Force
-          if ((Get-FileHash '.github/validacao/535.zip' -Algorithm SHA256).Hash -ne '9665d7c5f804632cb6562acb20e3275d790edd6d18b85ce895244857d2a5edba') { throw 'Transporte 535 divergente.' }
+          if ((Get-FileHash '.github/validacao/535.zip' -Algorithm SHA256).Hash -ne 'a75cd8c7f40f0b17ef9791ef7a770591c1e18fb3a9efc04af67a0475fd46adf2') { throw 'Transporte 535 divergente.' }
           Expand-Archive '.github/validacao/535.zip' -DestinationPath qa -Force
           $manifest = Get-Content qa/manifest.json -Raw | ConvertFrom-Json -AsHashtable
-          if ($manifest.source_commit -ne '35f2bd109a4a300119c99991f829f70f4259a897') { throw 'Fonte divergente.' }
+          if ($manifest.source_commit -ne 'ede366fa1a881b6e06dc792554eba3a6664f8f68') { throw 'Fonte divergente.' }
           Invoke-WebRequest 'https://github.com/FinanceiroMasterPro/FinanceiroMasterPro-Atualizacoes/releases/download/2026.534/FinanceiroMasterPro_Atualizacao_2026.534_FINAL.zip' -OutFile base528.zip
           if ((Get-FileHash base528.zip -Algorithm SHA256).Hash -ne $manifest.base_sha256) { throw 'Base aprovada divergente.' }
           Expand-Archive base528.zip -DestinationPath app
@@ -69,7 +69,7 @@ jobs:
             if (!(Test-Path "app/$arquivo")) { throw "Pacote incompleto: $arquivo" }
           }
           if (Test-Path app/FinanceiroMasterPro.Updater.exe) { throw 'Atualizador em uso incluido.' }
-          Write-Host 'Binarios conferidos com compilacao da fonte 35f2bd109a4a300119c99991f829f70f4259a897.'
+          Write-Host 'Binarios conferidos com compilacao da fonte ede366fa1a881b6e06dc792554eba3a6664f8f68.'
       - name: Preparar estilos a partir dos recursos compilados
         shell: pwsh
         run: |
@@ -249,9 +249,9 @@ jobs:
         run: |
           if gh release view 2026.535 >/dev/null 2>&1; then
             gh release upload 2026.535 pacote/FinanceiroMasterPro_Atualizacao_2026.535_FINAL.zip --clobber
-            gh release edit 2026.535 --title 'Financeiro Master Pro 2026.535' --notes 'Resumo de Contas na lateral esquerda do cartao com grupos, icones e saldos, preservando a estrutura dos campos a direita. Retorno superior abre a Tela de Lancamentos filtrada pela conta do cartao atual. Saldos atualizados ao salvar e pagar/cancelar a fatura. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 35f2bd109a4a300119c99991f829f70f4259a897.'
+            gh release edit 2026.535 --title 'Financeiro Master Pro 2026.535' --notes 'Resumo de Contas na lateral esquerda do cartao com grupos, icones e saldos, preservando a estrutura dos campos a direita. Retorno superior abre a Tela de Lancamentos filtrada pela conta do cartao atual. Saldos atualizados ao salvar e pagar/cancelar a fatura. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte ede366fa1a881b6e06dc792554eba3a6664f8f68.'
           else
-            gh release create 2026.535 pacote/FinanceiroMasterPro_Atualizacao_2026.535_FINAL.zip --title 'Financeiro Master Pro 2026.535' --notes 'Resumo de Contas na lateral esquerda do cartao com grupos, icones e saldos, preservando a estrutura dos campos a direita. Retorno superior abre a Tela de Lancamentos filtrada pela conta do cartao atual. Saldos atualizados ao salvar e pagar/cancelar a fatura. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte 35f2bd109a4a300119c99991f829f70f4259a897.'
+            gh release create 2026.535 pacote/FinanceiroMasterPro_Atualizacao_2026.535_FINAL.zip --title 'Financeiro Master Pro 2026.535' --notes 'Resumo de Contas na lateral esquerda do cartao com grupos, icones e saldos, preservando a estrutura dos campos a direita. Retorno superior abre a Tela de Lancamentos filtrada pela conta do cartao atual. Saldos atualizados ao salvar e pagar/cancelar a fatura. Pacote validado no Windows com suites de regressao, instalacao e rollback. Fonte ede366fa1a881b6e06dc792554eba3a6664f8f68.'
           fi
       - name: Confirmar download publico e SHA256
         shell: bash
